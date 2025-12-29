@@ -1,0 +1,92 @@
+{
+  "openapi" : "3.0.1",
+  "info" : {
+    "title" : "Feeminton",
+    "version" : "1.0"
+  },
+  "servers" : [ {
+    "url" : "https://nno3q5ecp6.execute-api.us-west-2.amazonaws.com/Stage/api"
+    },
+    {
+    "url" : "http://127.0.0.1:5000/api"
+    }
+  ],
+  "paths" : {
+    "/members" : {
+      "get" : {
+        "tags": ["Members"],
+        "responses": {},
+        "security": []
+      }
+    },
+    "/reservations": {
+      "get" : {
+        "tags": ["Reservations"],
+        "responses": {},
+        "security": []
+      },
+      "post": {
+        "tags": ["Reservations"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewReservation"
+              }
+            }
+          }
+        },
+        "responses": {},
+        "security": []
+      }
+    },
+    "/attendances/{attendance_id}": {
+      "patch": {
+        "tags": ["Attendances"],
+        "parameters": [
+          {
+            "name": "attendance_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAttendance"
+              }
+            }
+          }
+        },
+        "responses": {},
+        "security": []
+      }
+    }
+  },
+  "components" : {
+    "schemas": {
+      "NewReservation": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "example": "2023-10-20T14:48:00.000Z"
+          }
+        }
+      },
+      "UpdateAttendance": {
+        "type": "object",
+        "properties": {
+          "joined": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      }
+    }
+  }
+}

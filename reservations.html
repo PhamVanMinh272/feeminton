@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Reservations Attendance</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    h2 { margin-top: 30px; }
+    table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    th { background: #f4f4f4; }
+    button { padding: 5px 10px; cursor: pointer; }
+    .joined { background-color: #d4edda; }
+    .not-joined { background-color: #f8d7da; }
+  </style>
+</head>
+<body>
+  <h1>Reservations Attendance</h1>
+  <div id="reservations"></div>
+
+  <script>
+    async function fetchReservations() {
+      const response = await fetch('http://127.0.0.1:5000/api/reservations');
+      const data = await response.json();
+      renderReservations(data.data);
+    }
+
+    function renderReservations(reservations) {
+      const container = document.getElementById('reservations');
+      container.innerHTML = '';
+
+      reservations.forEach(reservation => {
+        const section = document.createElement('div');
+        const title = document.createElement('h2');
+        title.textContent = `Date: ${reservation.date}`;
+        section.appendChild(title);
+
+        const table = document.createElement('table');
+        const thead = document.createElement('thead');
+        thead.innerHTML = `
+          <tr>
+            <th>Member ID</th>
+            <th>Name</th>
+            <th>Joined</th>
+            <th>Refund</th>
+            <th>Action</th>
+          </tr>`;
+        table.appendChild(thead);
+
+        const tbody = document.createElement('tbody');
+        reservation.attendances.forEach(att => {
+          const row = document.createElement('tr');
+          row.className = att.joined ? 'joined' : 'not-joined';
+          row.innerHTML = `
+            <td>${att.memberId}</td>
+            <td>${att.memberName}</td>
+            <td>${att.joined ? 'Yes' : 'No'}</td>
+            <td>${att.refundAmount}</td>
+            <td>
+              <button onclick="toggleAttendance(${att.attendanceId}, ${att.joined})">
+                ${att.joined ? 'Mark Absent' : 'Mark Joined'}
+              </button>
+            </td>`;
+          tbody.appendChild(row);
+        });
+        table.appendChild(tbody);
+        section.appendChild(table);
+        container.appendChild(section);
+      });
+    }
+
+    async function toggleAttendance(attendanceId, joined) {
+      const response = await fetch(`http://127.0.0.1:5000/api/attendances/${attendanceId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ joined: !joined })
+      });
+
+      if (response.ok) {
+        alert('Attendance updated!');
+        fetchReservations(); // refresh list
+      } else {
+        alert('Failed to update attendance');
+      }
+    }
+
+    // Initial load
+    fetchReservations();
+  </script>
+</body>
+</html>

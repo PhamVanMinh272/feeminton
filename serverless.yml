@@ -1,0 +1,78 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Badminton Group Fee & Refund Lambda with API Gateway
+
+Resources:
+  BadmintonLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: BadmintonLambdaRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  BadmintonLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: BadmintonFeeRefund
+      Runtime: python3.11
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt BadmintonLambdaRole.Arn
+      Timeout: 30
+      MemorySize: 256
+      Code:
+        S3Bucket: your-code-bucket-name   # Replace with your S3 bucket
+        S3Key: badminton-lambda.zip       # Replace with your deployment package
+
+  BadmintonApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: BadmintonFeeRefundAPI
+      Description: API Gateway for badminton fee/refund Lambda
+
+  BadmintonApiResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref BadmintonApi
+      ParentId: !GetAtt BadmintonApi.RootResourceId
+      PathPart: badminton
+
+  BadmintonApiMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref BadmintonApi
+      ResourceId: !Ref BadmintonApiResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${BadmintonLambdaFunction.Arn}/invocations
+
+  BadmintonApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      RestApiId: !Ref BadmintonApi
+      StageName: prod
+    DependsOn: BadmintonApiMethod
+
+  LambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref BadmintonLambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${BadmintonApi}/*/POST/badminton
+
+Outputs:
+  ApiEndpoint:
+    Description: "Invoke URL for the badminton fee/refund API"
+    Value:
+      Fn::Sub: https://${BadmintonApi}.execute-api.${AWS::Region}.amazonaws.com/prod/badminton
