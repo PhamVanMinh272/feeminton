@@ -1,8 +1,22 @@
--- Members table: only store identity and gender
-CREATE TABLE IF NOT EXISTS members (
+-- Users table: only store identity
+CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     gender TEXT CHECK(gender IN ('male','female')) NOT NULL
+);
+
+-- Groups table: only store identity
+CREATE TABLE IF NOT EXISTS groups (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL
+);
+
+-- Members table: only store identity and gender
+CREATE TABLE IF NOT EXISTS members (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    group_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    nickname TEXT NOT NULL
 );
 
 -- Reservations table: each reservation has a date and number of courts

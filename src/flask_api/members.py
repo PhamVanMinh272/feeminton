@@ -2,7 +2,7 @@ from flask import Blueprint
 
 from src.api_logic import members
 
-members_router = Blueprint("member", __name__)
+members_router = Blueprint("members", __name__)
 
 
 @members_router.route("", methods=["GET"])

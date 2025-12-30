@@ -12,6 +12,13 @@
     }
   ],
   "paths" : {
+    "/groups": {
+      "get" : {
+        "tags": ["Groups"],
+        "responses": {},
+        "security": []
+      }
+    },
     "/members" : {
       "get" : {
         "tags": ["Members"],
