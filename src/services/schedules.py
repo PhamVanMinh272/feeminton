@@ -156,7 +156,11 @@ class ScheduleService:
         # hard code
         min_fee_groups = {
             1: 40,
-            2: 100,
+            2: 90,
+        }
+        max_refund_groups = {
+            1: 40,
+            2: 50,
         }
         """
         New logic:
@@ -170,6 +174,10 @@ class ScheduleService:
         all_attendances = ScheduleRepo(self._conn).get_attendances_by_schedule_id(schedule_id)
         drop_out_count = sum(1 for att in all_attendances if not att["joined"])
         refund_amount = int(min_fee_groups.get(schedule["groupId"], 50) / drop_out_count) if drop_out_count > 0 else 0
+        # check max refund
+        max_refund = max_refund_groups.get(schedule["groupId"], 50)
+        if refund_amount > max_refund:
+            refund_amount = max_refund
         for att in all_attendances:
             if not att["joined"]:
                 ScheduleRepo(self._conn).update_attendance(att["attendanceId"], False, refund_amount)

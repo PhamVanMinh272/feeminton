@@ -62,6 +62,13 @@
         </div>
         <a id="backLink" class="btn btn-outline-secondary">← Back to Groups</a>
       </div>
+
+      <div class="btn-group">
+        <a id="createScheduleBtn" class="btn btn-primary">
+          + Create Schedule
+        </a>
+      </div>
+
     </header>
 
     <div class="sticky-actions py-2 mb-3">
@@ -90,12 +97,31 @@
   </div>
 
   <!-- Use your single-source API config -->
-  <script src="config.js"></script>
+  <script src="js/config.js"></script>
 
   <!-- Then load the page module -->
   <script type="module">
-    import { initSchedulesPage } from './schedules.js';
+    import { initSchedulesPage } from './js/schedules.js';
     initSchedulesPage();
   </script>
+
+  <script>
+    // After config.js is loaded and your state is available (groupId, groupName, year, month)
+    // Example: call this where you initialize other header links
+    (function () {
+      const qs = new URLSearchParams(window.location.search);
+      const groupId   = qs.get('groupId') || '';
+      const groupName = qs.get('groupName') || '';
+      const year      = qs.get('year') || String(new Date().getFullYear());
+      const month     = qs.get('month') || String(new Date().getMonth() + 1);
+
+      const params = new URLSearchParams({ groupId, groupName, year, month }).toString();
+      const href = `feeminton/ui/new_schedules.html?${params}`;
+      const btn = document.getElementById('createScheduleBtn');
+      // Preserve ?api=... via API.link (config.js)
+      btn.href = API.link(href);
+    })();
+  </script>
+
 </body>
 </html>
