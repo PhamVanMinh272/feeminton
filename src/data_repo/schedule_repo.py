@@ -8,12 +8,13 @@ class ScheduleRepo:
         self._conn = conn
         self._cursor = conn.cursor()
 
-    def get_all_schedules(self) -> list[dict]:
+    def get_all_schedules(self, group_id: int) -> list[dict]:
         self._cursor.execute(
             """
             SELECT schedules.id, schedule_date
-            FROM schedules 
-            ORDER BY schedule_date DESC"""
+            FROM schedules where group_id = ?
+            ORDER BY schedule_date DESC""",
+            (group_id,),
         )
         rows = self._cursor.fetchall()
         sections = [

@@ -11,7 +11,7 @@ from src.settings import logger
 class ScheduleService:
     def __init__(self, conn):
         self._conn = conn
-        self.schedules = ScheduleRepo(self._conn).get_all_schedules()
+        self.schedules = None
 
     @staticmethod
     def _month_range(year: Optional[int] = None, month: Optional[int] = None) -> Tuple[
@@ -66,7 +66,7 @@ class ScheduleService:
 
         # Filter reservations within [start_dt, end_dt]
         filtered: List[Dict] = []
-        print(self.schedules)
+        self.schedules = ScheduleRepo(self._conn).get_all_schedules(group_id=params.group_id)
 
         for r in self.schedules or []:
             r_date_str = r.get("scheduleDate")
@@ -78,11 +78,8 @@ class ScheduleService:
             except ValueError:
                 # Skip malformed date strings
                 continue
-            print(r_date)
-            print(start_dt, end_dt)
             if start_dt <= r_date <= end_dt:
                 filtered.append(r)
-        print(filtered)
         response_data: List[Dict] = []
         repo = ScheduleRepo(self._conn)
 
