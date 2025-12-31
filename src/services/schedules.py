@@ -182,3 +182,7 @@ class ScheduleService:
             if not att["joined"]:
                 ScheduleRepo(self._conn).update_attendance(att["attendanceId"], False, refund_amount)
         logger.info(f"Updated refund amounts for dropouts in schedule ID {schedule_id} to {refund_amount}")
+
+
+    def delete_schedule(self, schedule_id: int):
+        ScheduleRepo(self._conn).delete_schedule(schedule_id)

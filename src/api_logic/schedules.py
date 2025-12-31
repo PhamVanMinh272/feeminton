@@ -30,3 +30,10 @@ def patch_attendance(conn, attendance_id, joined, **kwargs):
     data = ScheduleService(conn).patch_attendance(attendance_id, joined)
     logger.info(f"Patched attendance ID: {attendance_id} with joined: {joined}")
     return {"data": data}
+
+
+@db_context_manager
+def delete_schedule(conn, schedule_id, **kwargs):
+    ScheduleService(conn).delete_schedule(schedule_id)
+    logger.info(f"Deleted schedule with ID: {schedule_id}")
+    return {"status": "success"}

@@ -188,3 +188,18 @@ class ScheduleRepo:
                 "refundAmount": row[4],
             }
         return None
+
+    def delete_schedule(self, schedule_id: int):
+        # First delete associated attendance records
+        self._cursor.execute(
+            "DELETE FROM attendance WHERE schedule_id = ?",
+            (schedule_id,),
+        )
+        # Then delete the schedule itself
+        self._cursor.execute(
+            "DELETE FROM schedules WHERE id = ?",
+            (schedule_id,),
+        )
+        # commit
+        self._cursor.connection.commit()
+        return

@@ -25,35 +25,6 @@ def patch_attendance(attendance_id):
     return schedules.patch_attendance(attendance_id=attendance_id, joined=joined)
 
 
-
-
-# @session_router.route("", methods=["POST"])
-# def add_session():
-#     return reservations.add_session(**request.json)
-#
-#
-# @session_router.route("/templates", methods=["GET"])
-# def get_session_templates():
-#     return reservations.get_session_templates()
-#
-#
-# @session_router.route("/attributes-data", methods=["GET"])
-# def get_session_attributes_data():
-#     return reservations.get_session_attributes_data()
-#
-#
-# @session_router.route("/calc-cost-weighted", methods=["POST"])
-# def calc_cost_weighted():
-#     data = request.json
-#     return reservations.calc_cost_api_logic(**data)
-#
-#
-# @session_router.route("/calc-cost-equally", methods=["POST"])
-# def calc_cost_equally():
-#     data = request.json
-#     return reservations.calc_cost_equally(**data)
-#
-#
-# @session_router.route("/billing-types", methods=["GET"])
-# def get_billing_types():
-#     return reservations.get_billing_types()
+@schedules_router.route("/<int:schedule_id>", methods=["DELETE"])
+def delete_reservation(schedule_id):
+    return schedules.delete_schedule(schedule_id=schedule_id)

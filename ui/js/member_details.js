@@ -19,6 +19,10 @@ function formatNumber(n) {
   const num = Number(n ?? 0);
   return isNaN(num) ? '—' : num.toLocaleString(undefined);
 }
+function apiLink(href) {
+  const api = window.API;
+  return (api && typeof api.link === 'function') ? api.link(href) : href;
+}
 
 async function fetchMember(memberId) {
   const api = window.API;
@@ -56,26 +60,56 @@ function renderMember(data) {
   const nicknameBadge = document.getElementById('nicknameBadge');
   nicknameBadge.textContent = `Nickname: ${data.nickname ?? '—'}`;
 
-  // Raw JSON
-//  document.getElementById('rawJson').textContent = JSON.stringify(data, null, 2);
+  // ---- Build navigation links from URL query (with fallback to data) ----
+  const qsGroupId   = qs.get('groupId');    // group id passed in URL (preferred)
+  const qsGroupName = qs.get('groupName');  // group name passed in URL (preferred)
+  const qsYear      = qs.get('year');
+  const qsMonth     = qs.get('month');
+
+  // Fallbacks if query params are missing
+  const groupIdForLink   = qsGroupId ?? String(data.groupId);
+  const groupNameForLink = qsGroupName ?? '';
 
   // Navigate to schedules (preserve api via API.link)
   const toSchedulesLink = document.getElementById('toSchedulesLink');
-  toSchedulesLink.href = apiLink(`feeminton/ui/schedules.html?groupId=${encodeURIComponent(data.groupId)}&groupName=${encodeURIComponent(data.nickname || '')}`);
+  if (toSchedulesLink) {
+    const params = new URLSearchParams({
+      groupId: groupIdForLink,
+      groupName: groupNameForLink,
+    });
+    if (qsYear)  params.set('year', qsYear);
+    if (qsMonth) params.set('month', qsMonth);
+
+    toSchedulesLink.href = apiLink(`feeminton/ui/schedules.html?${params.toString()}`);
+  }
 
   // Back link — if we arrived from schedules, go back there; else default to index
   const backLink = document.getElementById('backLink');
-  const cameFromSchedules = window.document.referrer?.includes('schedules.html');
-  backLink.href = apiLink(cameFromSchedules
-    ? 'schedules.html'
-    : 'index.html'
-  );
-}
+  if (backLink) {
+    const ref = document.referrer || '';
+    try {
+      const refURL = new URL(ref);
+      const isSameOrigin = refURL.origin === window.location.origin;
+      const isSchedules = /\/schedules\.html$/i.test(refURL.pathname);
+      if (isSameOrigin && isSchedules) {
+        // Keep exact referrer (already contains its filters: ?api=&groupId=&groupName=&year=&month=)
+        backLink.href = ref;
+        return;
+      }
+    } catch (_) {
+      // ignore parse errors, fall back
+    }
 
-function apiLink(href) {
-  const api = window.API;
-  if (!api || typeof api.link !== 'function') return href;
-  return api.link(href);
+    // Fallback: construct a schedules link with current context OR go to index
+    const params = new URLSearchParams({
+      groupId: groupIdForLink,
+      groupName: groupNameForLink,
+    });
+    if (qsYear)  params.set('year', qsYear);
+    if (qsMonth) params.set('month', qsMonth);
+
+    backLink.href = apiLink(`feeminton/ui/schedules.html?${params.toString()}`);
+  }
 }
 
 async function loadAndRender() {
@@ -83,11 +117,11 @@ async function loadAndRender() {
   const loading = document.getElementById('loading');
   const content = document.getElementById('content');
 
-  if (!qs.get('memberId')) {
+  const memberId = qs.get('memberId');
+  if (!memberId) {
     showAlert('warning', 'Missing memberId in URL. Example: member-details.html?memberId=1');
     return;
   }
-  const memberId = qs.get('memberId');
 
   // Show spinner, hide content
   loading.style.display = '';
@@ -111,7 +145,9 @@ async function loadAndRender() {
 export function initMemberPage() {
   // Wire refresh
   const refreshBtn = document.getElementById('refreshBtn');
-  refreshBtn.addEventListener('click', loadAndRender);
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', loadAndRender);
+  }
 
   // Initial load
   loadAndRender();
