@@ -18,6 +18,6 @@ def create_schedule(conn, schedule_data, **kwargs):
 
 @db_context_manager
 def patch_attendance(conn, attendance_id, joined, **kwargs):
-    ScheduleService(conn).patch_attendance(attendance_id, joined)
+    data = ScheduleService(conn).patch_attendance(attendance_id, joined)
     logger.info(f"Patched attendance ID: {attendance_id} with joined: {joined}")
-    return {"status": "success"}
+    return {"data": data}

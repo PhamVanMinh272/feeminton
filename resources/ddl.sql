@@ -31,7 +31,8 @@ CREATE TABLE IF NOT EXISTS members (
 CREATE TABLE IF NOT EXISTS schedules (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     group_id INTEGER NOT NULL,
-    schedule_date date NOT NULL
+    schedule_date date NOT NULL,
+    description TEXT,
 );
 
 -- Attendance table: tracks who joined/unjoined each reservation

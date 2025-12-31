@@ -9,4 +9,4 @@ attendances_router = Blueprint("attendances", __name__)
 def patch_attendance(attendance_id):
     data = request.json
     joined = data.get("joined")
-    return reservations.patch_attendance(attendance_id=attendance_id, joined=joined)
+    return schedules.patch_attendance(attendance_id=attendance_id, joined=joined)

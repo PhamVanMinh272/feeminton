@@ -1,6 +1,6 @@
 
 // ui/schedules.js
-// NOTE: config.js should be loaded BEFORE this module so window.API is available.
+// Make sure ../config.js is loaded BEFORE this module so window.API exists.
 
 const qs = new URLSearchParams(window.location.search);
 
@@ -9,6 +9,7 @@ const state = {
   groupName: qs.get('groupName') || null,
   year: parseInt(qs.get('year') || new Date().getFullYear(), 10),
   month: parseInt(qs.get('month') || (new Date().getMonth() + 1), 10),
+  schedules: [],
 };
 
 // ---------------- Utilities ----------------
@@ -49,8 +50,7 @@ function setTitle() {
 function setBackLink() {
   const backLink = document.getElementById('backLink');
   if (!backLink) return;
-  const target = 'feeminton/ui/index.html'; // adjust if needed
-  // Use API.link to preserve ?api=... (from config.js)
+  const target = 'feeminton/ui/index.html'; // adjust path if needed
   backLink.href = (window.API && typeof window.API.link === 'function')
     ? window.API.link(target)
     : target;
@@ -129,7 +129,7 @@ function renderScheduleCard(s) {
   const joinedCount = attendees.reduce((acc, a) => acc + (a.joined ? 1 : 0), 0);
 
   return `
-    <div class="card schedule-card h-100 shadow-sm">
+    <div class="card schedule-card h-100 shadow-sm" data-schedule-id="${s.id}">
       <div class="card-header d-flex justify-content-between align-items-center">
         <div>
           <div class="fw-bold">${parts.weekday}, ${parts.day}/${pad2(parts.month)}/${parts.year}</div>
@@ -139,30 +139,129 @@ function renderScheduleCard(s) {
       </div>
       <ul class="list-group list-group-flush">
         ${attendees.map(a => `
-          <li class="list-group-item d-flex justify-content-between align-items-center">
+          <li class="list-group-item d-flex justify-content-between align-items-center" data-attendance-id="${a.attendanceId}">
             <div class="d-flex align-items-center gap-2">
-              <span class="joined-icon ${a.joined ? 'joined-true' : 'joined-false'}" title="${a.joined ? 'Joined' : 'Unjoined'}">
-                ${a.joined ? '✓' : '✕'}
-              </span>
+              <span class="joined-icon ${a.joined ? 'joined-true' : 'joined-false'}" title="${a.joined ? 'Joined' : 'Unjoined'}">${a.joined ? '✓' : '✕'}</span>
               <span class="attendee-name">${a.memberName}</span>
               <span class="text-muted small">#${a.memberId}</span>
-              ${a.refundAmount && Number(a.refundAmount) > 0
-                ? `<span class="badge bg-warning text-dark refund-badge">Refund: ${a.refundAmount}</span>`
-                : ''
-              }
+
+              <!-- Refund shown always -->
+              <span class="badge bg-warning text-dark refund-badge">Refund: ${Number(a.refundAmount ?? 0)}</span>
             </div>
-            <span class="badge ${a.joined ? 'bg-success' : 'bg-danger'}">
-              ${a.joined ? 'Joined' : 'Unjoined'}
-            </span>
+
+            <div class="d-flex align-items-center gap-3">
+              <!-- Joined/Unjoined text badge -->
+              <span class="badge ${a.joined ? 'bg-success' : 'bg-danger'} badge-status">
+                ${a.joined ? 'Joined' : 'Unjoined'}
+              </span>
+
+              <!-- Toggle switch -->
+              <div class="form-check form-switch m-0">
+                <input
+                  class="form-check-input join-switch"
+                  type="checkbox"
+                  role="switch"
+                  ${a.joined ? 'checked' : ''}
+                  aria-label="Toggle joined for ${a.memberName}"
+                  data-attendance-id="${a.attendanceId}"
+                />
+              </div>
+            </div>
           </li>
         `).join('')}
       </ul>
       <div class="card-footer d-flex justify-content-between align-items-center">
-        <span class="small text-muted">${joinedCount}/${attendees.length} joined</span>
+        <span class="small text-muted joined-count">${joinedCount}/${attendees.length} joined</span>
         <span class="small text-muted">${parts.year}-${pad2(parts.month)}-${pad2(parts.day)}</span>
       </div>
     </div>
   `;
+}
+
+// ---------------- PATCH helper ----------------
+async function patchAttendance(attendanceId, joined) {
+  const api = window.API;
+  if (!api || typeof api.join !== 'function') {
+    throw new Error('API helper is not available. Ensure config.js is loaded before schedules.js.');
+  }
+  const url = api.join(`/attendances/${attendanceId}`);
+
+  const res = await fetch(url, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ joined }),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Failed to update attendance #${attendanceId}: ${res.status} ${res.statusText}${text ? ' - ' + text : ''}`);
+  }
+
+  // If the server returns the updated attendance, use it; otherwise return joined only.
+  let data = null;
+  try {
+    data = await res.json();
+  } catch (_) { /* ignore */ }
+  return data || { attendanceId, joined };
+}
+
+// ---------------- Event delegation for toggles ----------------
+function bindToggleHandler() {
+  const grid = document.getElementById('grid');
+  if (!grid) return;
+
+  grid.addEventListener('change', async (evt) => {
+    const input = evt.target.closest('.join-switch');
+    if (!input) return;
+
+    const attendanceId = input.dataset.attendanceId;
+    const newJoined = input.checked;
+
+    // DOM references
+    const li = input.closest('li.list-group-item');
+    const icon = li.querySelector('.joined-icon');
+    const statusBadge = li.querySelector('.badge-status');
+    const refundBadge = li.querySelector('.refund-badge');
+    const card = input.closest('.card');
+    const joinedCountEl = card.querySelector('.joined-count');
+
+    // Disable to prevent double submits
+    input.disabled = true;
+
+    // Optimistic UI
+    icon.classList.toggle('joined-true', newJoined);
+    icon.classList.toggle('joined-false', !newJoined);
+    icon.textContent = newJoined ? '✓' : '✕';
+    statusBadge.className = `badge ${newJoined ? 'bg-success' : 'bg-danger'} badge-status`;
+    statusBadge.textContent = newJoined ? 'Joined' : 'Unjoined';
+
+    try {
+      const updated = await patchAttendance(attendanceId, newJoined);
+
+      // If backend returns refundAmount, reflect it
+      if (updated && typeof updated.refundAmount !== 'undefined' && refundBadge) {
+        refundBadge.textContent = `Refund: ${Number(updated.refundAmount)}`;
+      }
+
+      // Recompute joined count in this card
+      const switches = card.querySelectorAll('.join-switch');
+      let count = 0;
+      switches.forEach(sw => { if (sw.checked) count++; });
+      joinedCountEl.textContent = `${count}/${switches.length} joined`;
+    } catch (err) {
+      // Roll back UI if patch fails
+      input.checked = !newJoined;
+      icon.classList.toggle('joined-true', input.checked);
+      icon.classList.toggle('joined-false', !input.checked);
+      icon.textContent = input.checked ? '✓' : '✕';
+      statusBadge.className = `badge ${input.checked ? 'bg-success' : 'bg-danger'} badge-status`;
+      statusBadge.textContent = input.checked ? 'Joined' : 'Unjoined';
+
+      console.error(err);
+      showAlert('danger', err.message || 'Failed to update attendance.');
+    } finally {
+      input.disabled = false;
+    }
+  });
 }
 
 // ---------------- Data fetch ----------------
@@ -174,7 +273,6 @@ async function fetchAndRender() {
   if (grid) grid.innerHTML = '';
 
   try {
-    // Build API URL using config.js helper (global window.API)
     const api = window.API;
     if (!api || typeof api.join !== 'function') {
       throw new Error('API helper is not available. Ensure config.js is loaded before schedules.js.');
@@ -190,7 +288,7 @@ async function fetchAndRender() {
     const payload = await res.json();
     let schedules = Array.isArray(payload?.data) ? payload.data : [];
 
-    // Client-side filter (fallback if server ignores query)
+    // Client-side filter fallback
     schedules = schedules.filter(s => {
       const d = new Date(s.scheduleDate);
       return d.getFullYear() === state.year && (d.getMonth() + 1) === state.month;
@@ -199,8 +297,9 @@ async function fetchAndRender() {
     // Sort by date ascending
     schedules.sort((a, b) => new Date(a.scheduleDate) - new Date(b.scheduleDate));
 
-    if (loading) loading.style.display = 'none';
+    state.schedules = schedules;
 
+    if (loading) loading.style.display = 'none';
     if (!grid) return;
 
     if (schedules.length === 0) {
@@ -220,7 +319,6 @@ async function fetchAndRender() {
       frag.appendChild(col);
     });
     grid.appendChild(frag);
-
   } catch (err) {
     console.error(err);
     const loading = document.getElementById('loading');
@@ -238,4 +336,5 @@ export function initSchedulesPage() {
   updateSubtitle();
   updateUrl();
   fetchAndRender();
+  bindToggleHandler(); // enable PATCH toggle handler
 }

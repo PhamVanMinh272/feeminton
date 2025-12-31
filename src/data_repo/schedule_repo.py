@@ -130,63 +130,24 @@ class ScheduleRepo:
         self._cursor.connection.commit()
         return
 
-    # def get_all_templates(self) -> list[dict]:
-    #     self._cursor.execute(
-    #         """
-    #     SELECT
-    #     template.id,
-    #     template.name,
-    #     billing_type_id,
-    #     rental_cost,
-    #     shuttle_amount,
-    #     shuttle_price,
-    #     day_index,
-    #     GROUP_CONCAT(player.name, ',') as player_name FROM template
-    #     join template_player on template.id = template_player.template_id
-    #     join player on template_player.player_id = player.id
-    #     GROUP BY template.id,
-    #     template.name,
-    #     billing_type_id,
-    #     rental_cost,
-    #     shuttle_amount,
-    #     shuttle_price
-    #     """
-    #     )
-    #     rows = self._cursor.fetchall()
-    #     players = [
-    #         {
-    #             "id": row[0],
-    #             "name": row[1],
-    #             "billingType": row[2],
-    #             "rentalCost": row[3],
-    #             "shuttleAmount": row[4],
-    #             "shuttlePrice": row[5],
-    #             "day": row[6],
-    #             "players": [i for i in row[7].split(",") if i],
-    #         }
-    #         for row in rows
-    #     ]
-    #     return players
-    #
-    # def add_session(self, session_data: dict) -> int:
-    #     self._cursor.execute(
-    #         """
-    #         INSERT INTO practice_session (name, session_date, shift_time, location) VALUES (?, ?, ?, ?)
-    #         """,
-    #         (
-    #             session_data["name"],
-    #             session_data["sessionDate"],
-    #             session_data["shiftTime"],
-    #             session_data["location"],
-    #         ),
-    #     )
-    #     session_id = self._cursor.lastrowid
-    #     # commit
-    #     self._cursor.connection.commit()
-    #     return session_id
-    #
-    # def get_billing_types(self) -> list[dict]:
-    #     self._cursor.execute("SELECT id, name FROM billing_type")
-    #     rows = self._cursor.fetchall()
-    #     billing_types = [{"id": row[0], "name": row[1]} for row in rows]
-    #     return billing_types
+    def get_attendance_by_id(self, attendance_id: int) -> Optional[dict]:
+        self._cursor.execute(
+            """
+            SELECT
+                a.id, m.id, m.nickname, a.joined, a.refund_amount
+            FROM attendance AS a
+            JOIN members      AS m ON a.member_id = m.id
+            WHERE a.id = ?
+            """,
+            (attendance_id,),
+        )
+        row = self._cursor.fetchone()
+        if row:
+            return {
+                "attendanceId": row[0],
+                "memberId": row[1],
+                "memberName": row[2],
+                "joined": bool(row[3]),
+                "refundAmount": row[4],
+            }
+        return None

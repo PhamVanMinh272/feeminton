@@ -109,10 +109,18 @@ class ScheduleService:
         ScheduleRepo(self._conn).create_attendances_for_group_members(schedule_id)
         return schedule_id
 
-    def patch_attendance(self, attendance_id, joined):
+    def patch_attendance(self, attendance_id, joined) -> dict:
         """
         Patch attendance status.
         :return:
         """
         refund_amount = 20 if not joined else 0
         ScheduleRepo(self._conn).update_attendance(attendance_id, joined, refund_amount)
+
+        data = ScheduleRepo(self._conn).get_attendance_by_id(attendance_id)
+        if not data:
+            raise ValueError(f"Attendance with ID {attendance_id} does not exist.")
+        logger.info(f"Updated attendance: {data}")
+        return data
+
+
