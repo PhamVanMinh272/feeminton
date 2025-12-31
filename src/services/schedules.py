@@ -109,6 +109,13 @@ class ScheduleService:
         schedule["attendances"] = attendances
         return schedule
 
+    def _get_schedule_by_attendance_id(self, attendance_id: int):
+        """
+        Get schedule by attendance ID.
+        :return:
+        """
+        return ScheduleRepo(self._conn).get_schedule_by_attendance_id(attendance_id)
+
     def create_schedule(self, schedule_data):
         """
         Create a new reservation.
@@ -126,8 +133,13 @@ class ScheduleService:
         Patch attendance status.
         :return:
         """
-        refund_amount = 20 if not joined else 0
+
+        refund_amount = 0
         ScheduleRepo(self._conn).update_attendance(attendance_id, joined, refund_amount)
+
+        logger.info(f"Calculating refund for attendance ID {attendance_id} with joined={joined}")
+        schedule = self._get_schedule_by_attendance_id(attendance_id)
+        self._update_refunds_for_dropouts(schedule["id"])
 
         data = ScheduleRepo(self._conn).get_attendance_by_id(attendance_id)
         if not data:
@@ -135,4 +147,30 @@ class ScheduleService:
         logger.info(f"Updated attendance: {data}")
         return data
 
+    def _update_refunds_for_dropouts(self, schedule_id: int):
+        """
+        Recalculate and update refund amounts for all dropouts in a schedule.
+        :param schedule_id:
+        :return:
+        """
+        # hard code
+        min_fee_groups = {
+            1: 40,
+            2: 100,
+        }
+        """
+        New logic:
+        Refund amount logic:
+        refund_amount = int(min_fee_groups.get(group_id, 50) / drop_out_count)
+        """
+        # end hard code
+        # update refund amounts for other dropouts
 
+        schedule = ScheduleRepo(self._conn).get_schedule_by_id(schedule_id)
+        all_attendances = ScheduleRepo(self._conn).get_attendances_by_schedule_id(schedule_id)
+        drop_out_count = sum(1 for att in all_attendances if not att["joined"])
+        refund_amount = int(min_fee_groups.get(schedule["groupId"], 50) / drop_out_count) if drop_out_count > 0 else 0
+        for att in all_attendances:
+            if not att["joined"]:
+                ScheduleRepo(self._conn).update_attendance(att["attendanceId"], False, refund_amount)
+        logger.info(f"Updated refund amounts for dropouts in schedule ID {schedule_id} to {refund_amount}")

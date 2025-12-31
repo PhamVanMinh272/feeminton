@@ -134,6 +134,26 @@ class ScheduleRepo:
             for row in rows
         ]
 
+    def get_schedule_by_attendance_id(self, attendance_id: int) -> Optional[dict]:
+        self._cursor.execute(
+            """
+            SELECT
+                s.id, s.schedule_date, s.group_id
+            FROM schedules AS s
+            JOIN attendance AS a ON a.schedule_id = s.id
+            WHERE a.id = ?
+            """,
+            (attendance_id,),
+        )
+        row = self._cursor.fetchone()
+        if row:
+            return {
+                "id": row[0],
+                "scheduleDate": row[1],
+                "groupId": row[2],
+            }
+        return None
+
     def update_attendance(self, attendance_id: int, joined: bool, refund_amount: int):
         self._cursor.execute(
             """
