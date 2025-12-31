@@ -141,9 +141,12 @@ function renderScheduleCard(s) {
           <li class="list-group-item d-flex justify-content-between align-items-center" data-attendance-id="${a.attendanceId}">
             <div class="d-flex align-items-center gap-2">
               <span class="joined-icon ${a.joined ? 'joined-true' : 'joined-false'}" title="${a.joined ? 'Joined' : 'Unjoined'}">${a.joined ? '✓' : '✕'}</span>
-              <span class="attendee-name">${a.memberName}</span>
-              <span class="text-muted small">#${a.memberId}</span>
+              <!-- 🔗 Make the member name clickable -->
+              <a
+                href="${apiLink(`feeminton/ui/member_details.html?memberId=${encodeURIComponent(a.memberId)}`)}"
+                class="attendee-name text-decoration-none">${a.memberName}</a>
               <span class="badge bg-warning text-dark refund-badge">Refund: ${Number(a.refundAmount ?? 0)}</span>
+
             </div>
             <div class="d-flex align-items-center gap-3">
               <span class="badge ${a.joined ? 'bg-success' : 'bg-danger'} badge-status">${a.joined ? 'Joined' : 'Unjoined'}</span>
@@ -371,6 +374,14 @@ function bindToggleHandler() {
     }
   });
 }
+
+
+// Put this near your other helpers in ui/schedules.js
+function apiLink(href) {
+  const api = window.API;
+  return (api && typeof api.link === 'function') ? api.link(href) : href;
+}
+
 
 // ---------------- Public init ----------------
 export function initSchedulesPage() {

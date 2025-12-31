@@ -26,6 +26,23 @@
         "security": []
       }
     },
+    "/members/{member_id}": {
+      "get" : {
+        "tags": ["Members"],
+        "parameters": [
+          {
+            "name": "member_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {},
+        "security": []
+      }
+    },
     "/schedules": {
       "get" : {
         "tags": ["Schedules"],

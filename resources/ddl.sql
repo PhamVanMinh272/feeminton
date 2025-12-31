@@ -19,15 +19,6 @@ CREATE TABLE IF NOT EXISTS members (
     nickname TEXT NOT NULL
 );
 
----- Reservations table: each reservation has a date and number of courts
---CREATE TABLE IF NOT EXISTS reservations (
---    id INTEGER PRIMARY KEY AUTOINCREMENT,
---    group_id INTEGER NOT NULL,
---    reservation_date date NOT NULL,
---    court_count INTEGER DEFAULT 1
---);
-
-
 CREATE TABLE IF NOT EXISTS schedules (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     group_id INTEGER NOT NULL,
@@ -52,8 +43,19 @@ CREATE TABLE IF NOT EXISTS refunds (
     member_id INTEGER NOT NULL,
     month TEXT NOT NULL,
     total_refund INTEGER DEFAULT 0,
-    status TEXT CHECK(status IN ('pending','sent')) DEFAULT 'pending',
+    status TEXT CHECK(status IN ('pending','reviewed')) DEFAULT 'pending',
     FOREIGN KEY(member_id) REFERENCES members(id)
 );
+
+
+CREATE TABLE IF NOT EXISTS bills (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    member_id INTEGER NOT NULL,
+    month TEXT NOT NULL,
+    total_refund INTEGER DEFAULT 0,
+    status TEXT CHECK(status IN ('pending','reviewed')) DEFAULT 'pending',
+    FOREIGN KEY(member_id) REFERENCES members(id)
+);
+
 
 
