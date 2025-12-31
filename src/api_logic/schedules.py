@@ -10,11 +10,20 @@ def get_schedules(conn, **kwargs):
     logger.info(f"Fetched schedules: {data}")
     return {"data": data}
 
+
+@db_context_manager
+def get_schedule(conn, schedule_id, **kwargs):
+    data = ScheduleService(conn).get_schedule(schedule_id)
+    logger.info(f"Fetched schedule: {data}")
+    return {"data": data}
+
+
 @db_context_manager
 def create_schedule(conn, schedule_data, **kwargs):
     reservation_id = ScheduleService(conn).create_schedule(schedule_data)
     logger.info(f"Created schedule with ID: {reservation_id}")
     return {"scheduleId": reservation_id}
+
 
 @db_context_manager
 def patch_attendance(conn, attendance_id, joined, **kwargs):

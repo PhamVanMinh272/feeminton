@@ -1,8 +1,9 @@
 
 // ui/schedules.js
-// Ensure ../config.js is loaded BEFORE this module so window.API exists.
+// Make sure ../config.js is loaded BEFORE this module so window.API exists.
 
 const qs = new URLSearchParams(window.location.search);
+
 const state = {
   groupId: qs.get('groupId') || null,
   groupName: qs.get('groupName') || null,
@@ -13,15 +14,15 @@ const state = {
 
 // ---------------- Utilities ----------------
 function showAlert(type, message) {
-  const el = document.getElementById('alert');
-  el.className = `alert alert-${type}`;
-  el.textContent = message;
-  el.classList.remove('d-none');
+  const alertEl = document.getElementById('alert');
+  alertEl.className = `alert alert-${type}`;
+  alertEl.textContent = message;
+  alertEl.classList.remove('d-none');
 }
 function clearAlert() {
-  const el = document.getElementById('alert');
-  el.classList.add('d-none');
-  el.textContent = '';
+  const alertEl = document.getElementById('alert');
+  alertEl.classList.add('d-none');
+  alertEl.textContent = '';
 }
 function pad2(n) { return String(n).padStart(2, '0'); }
 function monthKey(y, m) { return `${y}-${pad2(m)}`; }
@@ -49,7 +50,7 @@ function setTitle() {
 function setBackLink() {
   const backLink = document.getElementById('backLink');
   if (!backLink) return;
-  const target = 'feeminton/ui/index.html'; // adjust if needed
+  const target = 'feeminton/ui/index.html'; // adjust path if needed
   backLink.href = (window.API && typeof window.API.link === 'function')
     ? window.API.link(target)
     : target;
@@ -143,14 +144,23 @@ function renderScheduleCard(s) {
               <span class="joined-icon ${a.joined ? 'joined-true' : 'joined-false'}" title="${a.joined ? 'Joined' : 'Unjoined'}">${a.joined ? '✓' : '✕'}</span>
               <span class="attendee-name">${a.memberName}</span>
               <span class="text-muted small">#${a.memberId}</span>
+
+              <!-- Refund shown always -->
               <span class="badge bg-warning text-dark refund-badge">Refund: ${Number(a.refundAmount ?? 0)}</span>
             </div>
+
             <div class="d-flex align-items-center gap-3">
-              <span class="badge ${a.joined ? 'bg-success' : 'bg-danger'} badge-status">${a.joined ? 'Joined' : 'Unjoined'}</span>
+              <!-- Joined/Unjoined text badge -->
+              <span class="badge ${a.joined ? 'bg-success' : 'bg-danger'} badge-status">
+                ${a.joined ? 'Joined' : 'Unjoined'}
+              </span>
+
+              <!-- Toggle switch -->
               <div class="form-check form-switch m-0">
                 <input
                   class="form-check-input join-switch"
-                  type="checkbox" role="switch"
+                  type="checkbox"
+                  role="switch"
                   ${a.joined ? 'checked' : ''}
                   aria-label="Toggle joined for ${a.memberName}"
                   data-attendance-id="${a.attendanceId}"
@@ -168,129 +178,8 @@ function renderScheduleCard(s) {
   `;
 }
 
-// ---------------- Data fetch ----------------
-async function fetchMonthSchedules() {
-  const api = window.API;
-  if (!api || typeof api.join !== 'function') {
-    throw new Error('API helper is not available. Ensure config.js is loaded before schedules.js.');
-  }
-  const url = new URL(api.join('/schedules'), window.location.origin);
-  url.searchParams.set('year', String(state.year));
-  url.searchParams.set('month', String(state.month));
-  if (state.groupId) url.searchParams.set('groupId', String(state.groupId));
+// ---------------- PATCH helper ----------------
 
-  const res = await fetch(url.toString(), { headers: { 'Content-Type': 'application/json' } });
-  if (!res.ok) throw new Error(`Failed to fetch schedules: ${res.status} ${res.statusText}`);
-
-  const payload = await res.json();
-  let schedules = Array.isArray(payload?.data) ? payload.data : [];
-
-  // Client-side filter fallback
-  schedules = schedules.filter(s => {
-    const d = new Date(s.scheduleDate);
-    return d.getFullYear() === state.year && (d.getMonth() + 1) === state.month;
-  });
-
-  // Sort by date ascending
-  schedules.sort((a, b) => new Date(a.scheduleDate) - new Date(b.scheduleDate));
-  return schedules;
-}
-
-async function fetchAndRender() {
-  clearAlert();
-  const loading = document.getElementById('loading');
-  const grid = document.getElementById('grid');
-  if (loading) loading.style.display = '';
-  if (grid) grid.innerHTML = '';
-
-  try {
-    const schedules = await fetchMonthSchedules();
-    state.schedules = schedules;
-
-    if (loading) loading.style.display = 'none';
-    if (!grid) return;
-
-    if (schedules.length === 0) {
-      grid.innerHTML = `
-        <div class="col">
-          <div class="alert alert-info">No schedules found for ${formatMonthLabel(state.year, state.month)}.</div>
-        </div>`;
-      return;
-    }
-
-    // Render columns
-    const frag = document.createDocumentFragment();
-    schedules.forEach(s => {
-      const col = document.createElement('div');
-      col.className = 'col';
-      col.innerHTML = renderScheduleCard(s);
-      frag.appendChild(col);
-    });
-    grid.appendChild(frag);
-  } catch (err) {
-    console.error(err);
-    if (loading) loading.style.display = 'none';
-    showAlert('danger', err.message || 'Unexpected error while loading schedules.');
-  }
-}
-
-// -------- Single schedule refresh (preferred) --------
-async function fetchScheduleById(scheduleId) {
-  const api = window.API;
-  if (!api || typeof api.join !== 'function') {
-    throw new Error('API helper is not available. Ensure config.js is loaded before schedules.js.');
-  }
-
-  // Try GET /schedules/{id} first (recommended backend endpoint)
-  const directUrl = api.join(`/schedules/${scheduleId}`);
-  try {
-    const res = await fetch(directUrl, { headers: { 'Content-Type': 'application/json' } });
-    if (res.ok) {
-      const json = await res.json();
-      // Expect either {data: {..}} or a plain schedule object
-      return json?.data || json;
-    }
-    // If 404 or not supported, fall back to month fetch below
-  } catch (_) { /* ignore and fall back */ }
-
-  // Fallback: re-fetch month and select the schedule by id
-  const monthSchedules = await fetchMonthSchedules();
-  const found = monthSchedules.find(s => String(s.id) === String(scheduleId));
-  if (!found) throw new Error(`Schedule #${scheduleId} not found after refresh.`);
-  return found;
-}
-
-async function refreshScheduleCard(scheduleId) {
-  const card = document.querySelector(`.schedule-card[data-schedule-id="${scheduleId}"]`);
-  const col = card ? card.closest('.col') : null;
-
-  // If we can’t find the card (some edge case), just re-render the whole grid
-  if (!card || !col) {
-    await fetchAndRender();
-    return;
-  }
-
-  // Show overlay spinner
-  card.classList.add('updating');
-  const spinner = document.createElement('div');
-  spinner.className = 'update-spinner';
-  spinner.innerHTML = `<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Updating…</span></div>`;
-  card.appendChild(spinner);
-
-  try {
-    const freshSchedule = await fetchScheduleById(scheduleId);
-    // Replace the entire card HTML with the fresh schedule (updates all refund amounts)
-    col.innerHTML = renderScheduleCard(freshSchedule);
-  } catch (err) {
-    console.error(err);
-    showAlert('danger', err.message || 'Failed to refresh schedule.');
-    // Keep old card if refresh fails
-    card.classList.remove('updating');
-    spinner.remove();
-  }
-}
-
-// ---------------- PATCH: use server envelope and refresh ----------------
 async function patchAttendance(attendanceId, joined) {
   const api = window.API;
   if (!api || typeof api.join !== 'function') {
@@ -308,12 +197,18 @@ async function patchAttendance(attendanceId, joined) {
     throw new Error(`Failed to update attendance #${attendanceId}: ${res.status} ${res.statusText}${text ? ' - ' + text : ''}`);
   }
 
-  // Your backend returns { data: { attendanceId, joined, refundAmount, ... } }
+  // IMPORTANT: backend wraps result in { data: { ... } }
   const json = await res.json();
-  return json?.data || { attendanceId, joined };
+  if (!json || typeof json !== 'object' || !json.data) {
+    // fallback if nothing returned
+    return { attendanceId, joined };
+  }
+  return json.data; // { attendanceId, joined, memberId, memberName, refundAmount }
 }
 
-// ---------------- Toggle handler ----------------
+
+// ---------------- Event delegation for toggles ----------------
+
 function bindToggleHandler() {
   const grid = document.getElementById('grid');
   if (!grid) return;
@@ -323,18 +218,20 @@ function bindToggleHandler() {
     if (!input) return;
 
     const attendanceId = input.dataset.attendanceId;
-    const li = input.closest('li.list-group-item');
-    const card = input.closest('.schedule-card');
-    const scheduleId = card?.dataset?.scheduleId;
-
     const optimisticJoined = input.checked;
+
+    // DOM references
+    const li = input.closest('li.list-group-item');
     const icon = li.querySelector('.joined-icon');
     const statusBadge = li.querySelector('.badge-status');
+    const refundBadge = li.querySelector('.refund-badge');
+    const card = input.closest('.card');
+    const joinedCountEl = card.querySelector('.joined-count');
 
-    // Prevent double submits
+    // Disable to prevent double submits
     input.disabled = true;
 
-    // Optimistic local toggle (optional)
+    // Optimistic UI update first
     icon.classList.toggle('joined-true', optimisticJoined);
     icon.classList.toggle('joined-false', !optimisticJoined);
     icon.textContent = optimisticJoined ? '✓' : '✕';
@@ -342,27 +239,42 @@ function bindToggleHandler() {
     statusBadge.textContent = optimisticJoined ? 'Joined' : 'Unjoined';
 
     try {
-      // PATCH on server
       const updated = await patchAttendance(attendanceId, optimisticJoined);
+      const finalJoined = !!updated.joined;
 
-      // Align the switch to server truth (in case server overrides)
-      input.checked = !!updated.joined;
+      // Align UI with server response (in case backend overrides)
+      input.checked = finalJoined;
+      icon.classList.toggle('joined-true', finalJoined);
+      icon.classList.toggle('joined-false', !finalJoined);
+      icon.textContent = finalJoined ? '✓' : '✕';
+      statusBadge.className = `badge ${finalJoined ? 'bg-success' : 'bg-danger'} badge-status`;
+      statusBadge.textContent = finalJoined ? 'Joined' : 'Unjoined';
 
-      // 🔁 REFRESH the entire schedule card to get new refund distribution
-      if (scheduleId) {
-        await refreshScheduleCard(scheduleId);
-      } else {
-        // Fallback if we didn't find a card
-        await fetchAndRender();
+      // ✅ Reflect refund amount immediately
+      if (refundBadge) {
+        const amount = Number(updated.refundAmount ?? 0);
+        refundBadge.textContent = `Refund: ${amount}`;
+
+        // Optional: highlight the change briefly
+        refundBadge.classList.add('refund-updated');
+        setTimeout(() => refundBadge.classList.remove('refund-updated'), 900);
       }
+
+      // Recompute joined count in this card
+      const switches = card.querySelectorAll('.join-switch');
+      let count = 0;
+      switches.forEach(sw => { if (sw.checked) count++; });
+      joinedCountEl.textContent = `${count}/${switches.length} joined`;
     } catch (err) {
-      // Roll back UI on error
+      // Roll back UI if patch fails
       input.checked = !optimisticJoined;
-      icon.classList.toggle('joined-true', input.checked);
-      icon.classList.toggle('joined-false', !input.checked);
-      icon.textContent = input.checked ? '✓' : '✕';
-      statusBadge.className = `badge ${input.checked ? 'bg-success' : 'bg-danger'} badge-status`;
-      statusBadge.textContent = input.checked ? 'Joined' : 'Unjoined';
+      const rolledBack = input.checked;
+
+      icon.classList.toggle('joined-true', rolledBack);
+      icon.classList.toggle('joined-false', !rolledBack);
+      icon.textContent = rolledBack ? '✓' : '✕';
+      statusBadge.className = `badge ${rolledBack ? 'bg-success' : 'bg-danger'} badge-status`;
+      statusBadge.textContent = rolledBack ? 'Joined' : 'Unjoined';
 
       console.error(err);
       showAlert('danger', err.message || 'Failed to update attendance.');
@@ -370,6 +282,70 @@ function bindToggleHandler() {
       input.disabled = false;
     }
   });
+}
+
+
+// ---------------- Data fetch ----------------
+async function fetchAndRender() {
+  clearAlert();
+  const loading = document.getElementById('loading');
+  const grid = document.getElementById('grid');
+  if (loading) loading.style.display = '';
+  if (grid) grid.innerHTML = '';
+
+  try {
+    const api = window.API;
+    if (!api || typeof api.join !== 'function') {
+      throw new Error('API helper is not available. Ensure config.js is loaded before schedules.js.');
+    }
+    const url = new URL(api.join('/schedules'), window.location.origin);
+    url.searchParams.set('year', String(state.year));
+    url.searchParams.set('month', String(state.month));
+    if (state.groupId) url.searchParams.set('groupId', String(state.groupId));
+
+    const res = await fetch(url.toString(), { headers: { 'Content-Type': 'application/json' } });
+    if (!res.ok) throw new Error(`Failed to fetch schedules: ${res.status} ${res.statusText}`);
+
+    const payload = await res.json();
+    let schedules = Array.isArray(payload?.data) ? payload.data : [];
+
+    // Client-side filter fallback
+    schedules = schedules.filter(s => {
+      const d = new Date(s.scheduleDate);
+      return d.getFullYear() === state.year && (d.getMonth() + 1) === state.month;
+    });
+
+    // Sort by date ascending
+    schedules.sort((a, b) => new Date(a.scheduleDate) - new Date(b.scheduleDate));
+
+    state.schedules = schedules;
+
+    if (loading) loading.style.display = 'none';
+    if (!grid) return;
+
+    if (schedules.length === 0) {
+      grid.innerHTML = `
+        <div class="col">
+          <div class="alert alert-info">No schedules found for ${formatMonthLabel(state.year, state.month)}.</div>
+        </div>`;
+      return;
+    }
+
+    // Render schedule columns
+    const frag = document.createDocumentFragment();
+    schedules.forEach(s => {
+      const col = document.createElement('div');
+      col.className = 'col';
+      col.innerHTML = renderScheduleCard(s);
+      frag.appendChild(col);
+    });
+    grid.appendChild(frag);
+  } catch (err) {
+    console.error(err);
+    const loading = document.getElementById('loading');
+    if (loading) loading.style.display = 'none';
+    showAlert('danger', err.message || 'Unexpected error while loading schedules.');
+  }
 }
 
 // ---------------- Public init ----------------
@@ -381,5 +357,5 @@ export function initSchedulesPage() {
   updateSubtitle();
   updateUrl();
   fetchAndRender();
-  bindToggleHandler();  // enable PATCH handler (which refreshes schedule card)
+  bindToggleHandler(); // enable PATCH toggle handler
 }

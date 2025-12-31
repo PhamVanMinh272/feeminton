@@ -10,6 +10,10 @@ schedules_router = Blueprint("reservations", __name__)
 def get_all_reservations():
     return schedules.get_schedules(**request.args)
 
+@schedules_router.route("/<int:schedule_id>", methods=["GET"])
+def get_reservation(schedule_id):
+    return schedules.get_schedule(schedule_id=schedule_id)
+
 @schedules_router.route("", methods=["POST"])
 def create_reservation():
     return schedules.create_schedule(schedule_data=request.json)

@@ -73,6 +73,23 @@
         "security": []
       }
     },
+    "/schedules/{schedule_id}": {
+      "get": {
+          "tags": ["Schedules"],
+          "parameters": [
+          {
+              "name": "schedule_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+              "type": "string"
+              }
+          }
+          ],
+          "responses": {},
+          "security": []
+      }
+    },
     "/attendances/{attendance_id}": {
       "patch": {
         "tags": ["Attendances"],

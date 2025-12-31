@@ -97,6 +97,18 @@ class ScheduleService:
 
         return response_data
 
+    def get_schedule(self, schedule_id: int):
+        """
+        Get a schedule by ID. And its attendances.
+        :return:
+        """
+        schedule = ScheduleRepo(self._conn).get_schedule_by_id(schedule_id)
+        if not schedule:
+            return None
+        attendances = ScheduleRepo(self._conn).get_attendances_by_schedule_id(schedule_id)
+        schedule["attendances"] = attendances
+        return schedule
+
     def create_schedule(self, schedule_data):
         """
         Create a new reservation.

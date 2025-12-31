@@ -26,6 +26,23 @@ class ScheduleRepo:
         ]
         return sections
 
+    def get_schedule_by_id(self, schedule_id: int) -> Optional[dict]:
+        self._cursor.execute(
+            """
+            SELECT schedules.id, schedule_date, group_id
+            FROM schedules WHERE schedules.id = ?
+            """,
+            (schedule_id,),
+        )
+        row = self._cursor.fetchone()
+        if row:
+            return {
+                "id": row[0],
+                "scheduleDate": row[1],
+                "groupId": row[2],
+            }
+        return None
+
     def create_schedule(self, schedule_data: NewScheduleModel) -> int:
         self._cursor.execute(
             """
