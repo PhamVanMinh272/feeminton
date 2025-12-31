@@ -383,6 +383,156 @@ function apiLink(href) {
 }
 
 
+//// ---- Helpers used below (you likely already have these) ----
+//function pad2(n) { return String(n).padStart(2, '0'); }
+//function toLocalDateParts(iso) {
+//  const d = new Date(iso);
+//  return {
+//    year: d.getFullYear(),
+//    month: d.getMonth() + 1,
+//    day: d.getDate(),
+//    weekday: d.toLocaleDateString(undefined, { weekday: 'short' }),
+//    time: d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
+//  };
+//}
+//function showAlert(type, message) {
+//  const el = document.getElementById('alert');
+//  el.className = `alert alert-${type}`;
+//  el.textContent = message;
+//  el.classList.remove('d-none');
+//}
+//function clearAlert() {
+//  const el = document.getElementById('alert');
+//  el.classList.add('d-none');
+//  el.textContent = '';
+//}
+
+// ---- Add a Delete button to each card header ----
+//function renderScheduleCard(s) {
+//  const parts = toLocalDateParts(s.scheduleDate);
+//  const attendees = Array.isArray(s.attendances) ? s.attendances.slice() : [];
+//  attendees.sort((a, b) => a.memberName.localeCompare(b.memberName, undefined, { sensitivity: 'base' }));
+//  const joinedCount = attendees.reduce((acc, a) => acc + (a.joined ? 1 : 0), 0);
+//
+//  return `
+//    <div class="card schedule-card h-100 shadow-sm" data-schedule-id="${s.id}">
+//      <div class="card-header d-flex justify-content-between align-items-center">
+//        <div>
+//          <div class="fw-bold">${parts.weekday}, ${parts.day}/${pad2(parts.month)}/${parts.year}</div>
+//          <div class="small text-muted">${parts.time}</div>
+//        </div>
+//
+//        <div class="d-flex align-items-center gap-2">
+//          <span class="badge bg-secondary">ID: ${s.id}</span>
+//          <button
+//            class="btn btn-outline-danger btn-sm btn-delete-schedule"
+//            title="Delete schedule"
+//            data-schedule-id="${s.id}"
+//            data-schedule-date="${parts.weekday}, ${parts.day}/${pad2(parts.month)}/${parts.year} ${parts.time}"
+//          >Delete</button>
+//        </div>
+//      </div>
+//
+//      <ul class="list-group list-group-flush">
+//        ${attendees.map(a => `
+//          <li class="list-group-item d-flex justify-content-between align-items-center" data-attendance-id="${a.attendanceId}">
+//            <div class="d-flex align-items-center gap-2">
+//              <span class="joined-icon ${a.joined ? 'joined-true' : 'joined-false'}" title="${a.joined ? 'Joined' : 'Unjoined'}">${a.joined ? '✓' : '✕'}</span>
+//
+//              ${(window.API && window.API.link) ? window.API.link(`member-details.html?memberId=${encodeURIComponent(a.memberId)}`) : `member-details.html?memberId=${encodeURIComponent(a.memberId)}`}${a.memberName}</a>
+//
+//              <span class="text-muted small">#${a.memberId}</span>
+//              <span class="badge bg-warning text-dark refund-badge">Refund: ${Number(a.refundAmount ?? 0)}</span>
+//            </div>
+//
+//            <div class="d-flex align-items-center gap-3">
+//              <span class="badge ${a.joined ? 'bg-success' : 'bg-danger'} badge-status">${a.joined ? 'Joined' : 'Unjoined'}</span>
+//              <!-- Your toggle code can remain here -->
+//            </div>
+//          </li>
+//        `).join('')}
+//      </ul>
+//
+//      <div class="card-footer d-flex justify-content-between align-items-center">
+//        <span class="small text-muted joined-count">${joinedCount}/${attendees.length} joined</span>
+//        <span class="small text-muted">${parts.year}-${pad2(parts.month)}-${pad2(parts.day)}</span>
+//      </div>
+//    </div>
+//  `;
+//}
+
+// ---- Delete flow: open modal -> confirm -> DELETE -> refresh ----
+function bindDeleteHandlers(fetchAndRender) {
+  const grid = document.getElementById('grid');
+  if (!grid) return;
+
+  grid.addEventListener('click', (evt) => {
+    const btn = evt.target.closest('.btn-delete-schedule');
+    if (!btn) return;
+
+    const scheduleId = btn.dataset.scheduleId;
+    const scheduleText = btn.dataset.scheduleDate;
+
+    // Fill modal content
+    const bodyEl = document.getElementById('confirmDeleteBody');
+    bodyEl.textContent = `Are you sure you want to delete schedule #${scheduleId} on ${scheduleText}?`;
+
+    const modalEl = document.getElementById('confirmDeleteModal');
+    modalEl.dataset.scheduleId = scheduleId;
+
+    // Show modal
+    const modal = new bootstrap.Modal(modalEl);
+    modal.show();
+
+    // Bind confirm button for this schedule
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+    const spinner = confirmBtn.querySelector('.spinner-border');
+
+    const onConfirm = async () => {
+      confirmBtn.disabled = true;
+      spinner.classList.remove('d-none');
+
+      try {
+        await deleteSchedule(scheduleId);
+        showAlert('success', `Schedule #${scheduleId} deleted successfully.`);
+
+        // Hide modal
+        modal.hide();
+
+        // Refresh month list (safer) or remove just the card
+        await fetchAndRender();
+      } catch (err) {
+        console.error(err);
+        showAlert('danger', err.message || `Failed to delete schedule #${scheduleId}.`);
+      } finally {
+        confirmBtn.disabled = false;
+        spinner.classList.add('d-none');
+        // Clean listener to avoid duplications on future deletions
+        confirmBtn.removeEventListener('click', onConfirm);
+      }
+    };
+
+    // Attach one-shot listener
+    confirmBtn.addEventListener('click', onConfirm, { once: true });
+  });
+}
+
+async function deleteSchedule(scheduleId) {
+  const api = window.API;
+  if (!api || typeof api.join !== 'function') {
+    throw new Error('API helper is not available. Ensure config.js is loaded.');
+  }
+  const url = api.join(`/schedules/${scheduleId}`);
+  const res = await fetch(url, { method: 'DELETE', headers: { 'Content-Type': 'application/json' } });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Delete failed: ${res.status} ${res.statusText}${text ? ' - ' + text : ''}`);
+  }
+}
+
+
+
+
 // ---------------- Public init ----------------
 export function initSchedulesPage() {
   setTitle();
@@ -393,4 +543,5 @@ export function initSchedulesPage() {
   updateUrl();
   fetchAndRender();
   bindToggleHandler();  // enable PATCH handler (which refreshes schedule card)
+  bindDeleteHandlers(fetchAndRender);
 }
