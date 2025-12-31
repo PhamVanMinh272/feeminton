@@ -134,8 +134,18 @@ function renderScheduleCard(s) {
           <div class="fw-bold">${parts.weekday}, ${parts.day}/${pad2(parts.month)}/${parts.year}</div>
           <div class="small text-muted">${parts.time}</div>
         </div>
-        <span class="badge bg-secondary">ID: ${s.id}</span>
+
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge bg-secondary">ID: ${s.id}</span>
+          <button
+            class="btn btn-outline-danger btn-sm btn-delete-schedule"
+            title="Delete schedule"
+            data-schedule-id="${s.id}"
+            data-schedule-date="${parts.weekday}, ${parts.day}/${pad2(parts.month)}/${parts.year} ${parts.time}"
+          >Delete</button>
+        </div>
       </div>
+
       <ul class="list-group list-group-flush">
         ${attendees.map(a => `
           <li class="list-group-item d-flex justify-content-between align-items-center" data-attendance-id="${a.attendanceId}">
@@ -381,85 +391,6 @@ function apiLink(href) {
   const api = window.API;
   return (api && typeof api.link === 'function') ? api.link(href) : href;
 }
-
-
-//// ---- Helpers used below (you likely already have these) ----
-//function pad2(n) { return String(n).padStart(2, '0'); }
-//function toLocalDateParts(iso) {
-//  const d = new Date(iso);
-//  return {
-//    year: d.getFullYear(),
-//    month: d.getMonth() + 1,
-//    day: d.getDate(),
-//    weekday: d.toLocaleDateString(undefined, { weekday: 'short' }),
-//    time: d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
-//  };
-//}
-//function showAlert(type, message) {
-//  const el = document.getElementById('alert');
-//  el.className = `alert alert-${type}`;
-//  el.textContent = message;
-//  el.classList.remove('d-none');
-//}
-//function clearAlert() {
-//  const el = document.getElementById('alert');
-//  el.classList.add('d-none');
-//  el.textContent = '';
-//}
-
-// ---- Add a Delete button to each card header ----
-//function renderScheduleCard(s) {
-//  const parts = toLocalDateParts(s.scheduleDate);
-//  const attendees = Array.isArray(s.attendances) ? s.attendances.slice() : [];
-//  attendees.sort((a, b) => a.memberName.localeCompare(b.memberName, undefined, { sensitivity: 'base' }));
-//  const joinedCount = attendees.reduce((acc, a) => acc + (a.joined ? 1 : 0), 0);
-//
-//  return `
-//    <div class="card schedule-card h-100 shadow-sm" data-schedule-id="${s.id}">
-//      <div class="card-header d-flex justify-content-between align-items-center">
-//        <div>
-//          <div class="fw-bold">${parts.weekday}, ${parts.day}/${pad2(parts.month)}/${parts.year}</div>
-//          <div class="small text-muted">${parts.time}</div>
-//        </div>
-//
-//        <div class="d-flex align-items-center gap-2">
-//          <span class="badge bg-secondary">ID: ${s.id}</span>
-//          <button
-//            class="btn btn-outline-danger btn-sm btn-delete-schedule"
-//            title="Delete schedule"
-//            data-schedule-id="${s.id}"
-//            data-schedule-date="${parts.weekday}, ${parts.day}/${pad2(parts.month)}/${parts.year} ${parts.time}"
-//          >Delete</button>
-//        </div>
-//      </div>
-//
-//      <ul class="list-group list-group-flush">
-//        ${attendees.map(a => `
-//          <li class="list-group-item d-flex justify-content-between align-items-center" data-attendance-id="${a.attendanceId}">
-//            <div class="d-flex align-items-center gap-2">
-//              <span class="joined-icon ${a.joined ? 'joined-true' : 'joined-false'}" title="${a.joined ? 'Joined' : 'Unjoined'}">${a.joined ? '✓' : '✕'}</span>
-//
-//              ${(window.API && window.API.link) ? window.API.link(`member-details.html?memberId=${encodeURIComponent(a.memberId)}`) : `member-details.html?memberId=${encodeURIComponent(a.memberId)}`}${a.memberName}</a>
-//
-//              <span class="text-muted small">#${a.memberId}</span>
-//              <span class="badge bg-warning text-dark refund-badge">Refund: ${Number(a.refundAmount ?? 0)}</span>
-//            </div>
-//
-//            <div class="d-flex align-items-center gap-3">
-//              <span class="badge ${a.joined ? 'bg-success' : 'bg-danger'} badge-status">${a.joined ? 'Joined' : 'Unjoined'}</span>
-//              <!-- Your toggle code can remain here -->
-//            </div>
-//          </li>
-//        `).join('')}
-//      </ul>
-//
-//      <div class="card-footer d-flex justify-content-between align-items-center">
-//        <span class="small text-muted joined-count">${joinedCount}/${attendees.length} joined</span>
-//        <span class="small text-muted">${parts.year}-${pad2(parts.month)}-${pad2(parts.day)}</span>
-//      </div>
-//    </div>
-//  `;
-//}
 
 // ---- Delete flow: open modal -> confirm -> DELETE -> refresh ----
 function bindDeleteHandlers(fetchAndRender) {

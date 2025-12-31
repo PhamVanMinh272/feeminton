@@ -87,7 +87,7 @@ document.getElementById('singleForm').addEventListener('submit', async (evt) => 
   try {
     await postSchedule(scheduleISO, groupIdVal);
     // Success → go back to schedules for the same group/month
-    window.location.href = API.link(`schedules.html?groupId=${encodeURIComponent(groupId)}&groupName=${encodeURIComponent(groupName)}&year=${encodeURIComponent(yearQS)}&month=${encodeURIComponent(monthQS)}`);
+    window.location.href = API.link(`feeminton/ui/schedules.html?groupId=${encodeURIComponent(groupId)}&groupName=${encodeURIComponent(groupName)}&year=${encodeURIComponent(yearQS)}&month=${encodeURIComponent(monthQS)}`);
   } catch (err) {
     console.error(err);
     showAlert('danger', err.message || 'Error creating schedule.');
