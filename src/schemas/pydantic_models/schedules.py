@@ -15,4 +15,4 @@ class SearchScheduleModel(BaseModel):
     group_id: Optional[int] = Field(alias="groupId", description="ID of the group")
 
     class Config:
-        allow_population_by_field_name = True
+        validate_by_name = True

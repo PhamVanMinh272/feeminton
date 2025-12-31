@@ -109,7 +109,7 @@ class ScheduleService:
         """
         new_reservation = NewScheduleModel(**schedule_data)
         schedule_id = ScheduleRepo(self._conn).create_schedule(new_reservation)
-        ScheduleRepo(self._conn).create_attendances_for_all_members(schedule_id)
+        ScheduleRepo(self._conn).create_attendances_for_group_members(schedule_id)
         return schedule_id
 
     def patch_attendance(self, attendance_id, joined):

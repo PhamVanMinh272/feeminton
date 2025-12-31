@@ -1,4 +1,4 @@
-INSERT INTO groups (name) VALUES ('Group Thu 4'), ('Group Thu 6');
+INSERT INTO groups (name) VALUES ('Chan Dong Original (Thu 4)'), ('Group Thu 6');
 
 -- Example seed data
 INSERT INTO users (name, gender) VALUES
@@ -9,13 +9,23 @@ INSERT INTO users (name, gender) VALUES
 ('Tấn', 'male'),
 ('Thoại', 'male'),
 ('Giao', 'female'),
-('Ân', 'female');
+('Ân', 'female'),
+('Thảo', 'female'),
+('Trí', 'male'),
+('Nghị', 'male'),
+('Tú', 'female');
 
 INSERT INTO members (group_id, user_id, nickname) VALUES
 (1, 1, 'Minh'),
 (1, 2, 'Đạt'),
-(1, 3, 'Thiên'),
-(1, 4, 'Tâm'),
+(1, 9, 'Thảo'),
+(1, 10, 'Trí'),
+(1, 11, 'Nghị'),
+(1, 12, 'Tú'),
+(2, 1, 'Minh'),
+(2, 2, 'Đạt'),
+(2, 3, 'Thiên'),
+(2, 4, 'Tâm'),
 (2, 5, 'Tấn'),
 (2, 6, 'Thoại'),
 (2, 7, 'Giao'),

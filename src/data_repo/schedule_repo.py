@@ -40,17 +40,37 @@ class ScheduleRepo:
         self._cursor.connection.commit()
         return reservation_id
 
-    def create_attendances_for_all_members(self, schedule_id: int):
-        self._cursor.execute(
-            """
-            INSERT INTO attendance (member_id, schedule_id, joined, refund_amount)
-            SELECT id, ?, 1, 0 FROM members
-            """,
-            (schedule_id,),
-        )
-        # commit
+    def create_attendances_for_group_members(self, schedule_id: int) -> int:
+        """
+        Insert attendance rows for all members that belong to the schedule's group.
+        Uses INSERT OR IGNORE (SQLite) to avoid duplicate rows (requires unique index).
+        Returns the number of rows that would be inserted (i.e., those not yet present).
+        """
+        # Count how many members still need attendance for this schedule
+        precheck_sql = """
+            SELECT COUNT(*)
+            FROM schedules s
+            JOIN members  m ON m.group_id = s.group_id
+            LEFT JOIN attendance a
+                   ON a.schedule_id = s.id AND a.member_id = m.id
+            WHERE s.id = ?
+              AND a.id IS NULL
+        """
+        self._cursor.execute(precheck_sql, (schedule_id,))
+        to_insert = int(self._cursor.fetchone()[0])
+
+        insert_sql = """
+            INSERT OR IGNORE INTO attendance (member_id, schedule_id, joined, refund_amount)
+            SELECT m.id, s.id, 1, 0
+            FROM schedules s
+            JOIN members  m ON m.group_id = s.group_id
+            WHERE s.id = ?
+        """
+        self._cursor.execute(insert_sql, (schedule_id,))
         self._cursor.connection.commit()
-        return
+
+        # Optionally return the number of new rows
+        return to_insert
 
     def get_attendances_by_schedule_id(
             self,
