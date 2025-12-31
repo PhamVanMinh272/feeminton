@@ -8,7 +8,7 @@ schedules_router = Blueprint("reservations", __name__)
 
 @schedules_router.route("", methods=["GET"])
 def get_all_reservations():
-    return schedules.get_schedules()
+    return schedules.get_schedules(**request.args)
 
 @schedules_router.route("", methods=["POST"])
 def create_reservation():

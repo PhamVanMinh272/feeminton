@@ -1,10 +1,274 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Title</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Schedules</title>
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+
+  <style>
+    body { background: #f8f9fa; }
+    .page-header { margin-top: 1.5rem; margin-bottom: 1rem; }
+    .schedule-card .attendee-name { font-weight: 500; }
+    .schedule-card .joined-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 1.4rem; height: 1.4rem; border-radius: 50%;
+      color: #fff; font-size: .85rem;
+    }
+    .joined-true { background: #198754; }  /* success */
+    .joined-false { background: #dc3545; } /* danger */
+    .refund-badge { margin-left: .5rem; }
+    .month-input { width: 220px; }
+    .sticky-actions { position: sticky; top: 0; z-index: 1; background: rgba(248,249,250,.9); backdrop-filter: blur(3px); }
+  </style>
 </head>
 <body>
+  <div class="container">
+    <!-- Header -->
+    <header class="page-header">
+      <div class="d-flex align-items-center justify-content-between">
+        <div>
+          <h1 id="title" class="h4 mb-1">Schedules</h1>
+          <p id="subtitle" class="text-muted mb-0">Loading…</p>
+        </div>
+        <a id="backLink" class="btn btn-outline-secondary">← Back to Groups</a>
+      </div>
+    </header>
 
+    <!-- Controls -->
+    <div class="sticky-actions py-2 mb-3">
+      <div class="d-flex flex-wrap gap-2 align-items-center">
+        <div class="input-group month-input">
+          <span class="input-group-text">Month</span>
+          <input id="monthPicker" type="month" class="form-control" />
+        </div>
+        <div class="btn-group" role="group" aria-label="Month navigation">
+          <button id="prevMonthBtn" class="btn btn-outline-primary">◀ Prev</button>
+          <button id="nextMonthBtn" class="btn btn-outline-primary">Next ▶</button>
+        </div>
+        <span id="groupBadge" class="badge bg-primary d-none"></span>
+      </div>
+    </div>
+
+    <!-- Alert + loading -->
+    <div id="alert" class="alert d-none" role="alert"></div>
+    <div id="loading" class="text-center py-4">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading…</span>
+      </div>
+      <div class="small text-muted mt-2">Fetching schedules…</div>
+    </div>
+
+    <!-- Schedules grid (columns) -->
+    <div id="grid" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3"></div>
+  </div>
+
+  <!-- Use your single-source API config -->
+  <script src="config.js"></script>
+
+  <script>
+    // -------- Utilities ----------
+    const qs = new URLSearchParams(window.location.search);
+
+    function showAlert(type, message) {
+      const alertEl = document.getElementById('alert');
+      alertEl.className = `alert alert-${type}`;
+      alertEl.textContent = message;
+      alertEl.classList.remove('d-none');
+    }
+    function clearAlert() {
+      const alertEl = document.getElementById('alert');
+      alertEl.classList.add('d-none');
+      alertEl.textContent = '';
+    }
+    function pad2(n) { return String(n).padStart(2, '0'); }
+    function toLocalDateParts(iso) {
+      const d = new Date(iso);
+      return {
+        year: d.getFullYear(),
+        month: d.getMonth() + 1,
+        day: d.getDate(),
+        weekday: d.toLocaleDateString(undefined, { weekday: 'short' }),
+        time: d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+      };
+    }
+    function monthKey(y, m) { return `${y}-${pad2(m)}`; }
+    function formatMonthLabel(y, m) {
+      const date = new Date(y, m - 1, 1);
+      return date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+    }
+
+    // -------- State from URL / defaults ----------
+    const groupId = qs.get('groupId') || null;
+    const groupName = qs.get('groupName') || null;
+
+    let year = parseInt(qs.get('year') || new Date().getFullYear(), 10);
+    let month = parseInt(qs.get('month') || (new Date().getMonth() + 1), 10);
+
+
+    // Show group name in the H1 (fallback to "Schedules" if missing)
+    const titleEl = document.getElementById('title');
+    titleEl.textContent = groupName ? groupName : 'Schedules';
+
+
+    // Init controls
+    document.getElementById('backLink').href = API.link('index.html');
+    const groupBadge = document.getElementById('groupBadge');
+    if (groupId) {
+      groupBadge.textContent = `Group #${groupId}`;
+      groupBadge.classList.remove('d-none');
+    }
+
+    const monthPicker = document.getElementById('monthPicker');
+    monthPicker.value = monthKey(year, month);
+    monthPicker.addEventListener('change', () => {
+      const [y, m] = monthPicker.value.split('-').map(Number);
+      year = y; month = m;
+      updateSubtitle();
+      fetchAndRender();
+      updateUrl();
+    });
+
+    document.getElementById('prevMonthBtn').addEventListener('click', () => {
+      const d = new Date(year, month - 1, 1);
+      d.setMonth(d.getMonth() - 1);
+      year = d.getFullYear();
+      month = d.getMonth() + 1;
+      monthPicker.value = monthKey(year, month);
+      updateSubtitle();
+      fetchAndRender();
+      updateUrl();
+    });
+    document.getElementById('nextMonthBtn').addEventListener('click', () => {
+      const d = new Date(year, month - 1, 1);
+      d.setMonth(d.getMonth() + 1);
+      year = d.getFullYear();
+      month = d.getMonth() + 1;
+      monthPicker.value = monthKey(year, month);
+      updateSubtitle();
+      fetchAndRender();
+      updateUrl();
+    });
+
+    function updateSubtitle() {
+      document.getElementById('subtitle').textContent = `Showing ${formatMonthLabel(year, month)}${groupId ? ' • Group #' + groupId : ''}`;
+    }
+    function updateUrl() {
+      const params = new URLSearchParams(window.location.search);
+      // Preserve api via config.js (API.link does this for navigation),
+      // but keep month/year/groupId in the current URL locally:
+
+      if (groupId) params.set('groupId', groupId); else params.delete('groupId');
+      params.set('year', String(year));
+      params.set('month', String(month));
+      const newUrl = window.location.pathname + '?' + params.toString();
+      window.history.replaceState({}, '', newUrl);
+    }
+
+    // -------- Fetch and render using config.js (API.join) ----------
+    async function fetchAndRender() {
+      clearAlert();
+      document.getElementById('loading').style.display = '';
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+
+      try {
+        // Build API URL using config.js helper
+        const url = new URL(API.join('/schedules'));
+        url.searchParams.set('year', String(year));
+        url.searchParams.set('month', String(month));
+        if (groupId) url.searchParams.set('groupId', String(groupId));
+
+
+        const res = await fetch(url.toString(), { headers: { 'Content-Type': 'application/json' } });
+        if (!res.ok) throw new Error(`Failed to fetch schedules: ${res.status} ${res.statusText}`);
+
+        const payload = await res.json();
+        let schedules = Array.isArray(payload?.data) ? payload.data : [];
+
+        // Client-side filter (fallback if server ignores query)
+        schedules = schedules.filter(s => {
+          const d = new Date(s.scheduleDate);
+          return d.getFullYear() === year && (d.getMonth() + 1) === month;
+        });
+
+        // Sort by date ascending
+        schedules.sort((a, b) => new Date(a.scheduleDate) - new Date(b.scheduleDate));
+
+        document.getElementById('loading').style.display = 'none';
+
+        if (schedules.length === 0) {
+          grid.innerHTML = `
+            <div class="col">
+              <div class="alert alert-info">No schedules found for ${formatMonthLabel(year, month)}.</div>
+            </div>`;
+          return;
+        }
+
+        // Render schedule columns
+        schedules.forEach(s => {
+          const parts = toLocalDateParts(s.scheduleDate);
+          const attendees = Array.isArray(s.attendances) ? s.attendances.slice() : [];
+          attendees.sort((a, b) => a.memberName.localeCompare(b.memberName, undefined, { sensitivity: 'base' }));
+
+          const joinedCount = attendees.reduce((acc, a) => acc + (a.joined ? 1 : 0), 0);
+
+          const col = document.createElement('div');
+          col.className = 'col';
+
+          col.innerHTML = `
+            <div class="card schedule-card h-100 shadow-sm">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                  <div class="fw-bold">${parts.weekday}, ${parts.day}/${pad2(parts.month)}/${parts.year}</div>
+                  <div class="small text-muted">${parts.time}</div>
+                </div>
+                <span class="badge bg-secondary">ID: ${s.id}</span>
+              </div>
+              <ul class="list-group list-group-flush">
+                ${attendees.map(a => `
+                  <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="joined-icon ${a.joined ? 'joined-true' : 'joined-false'}" title="${a.joined ? 'Joined' : 'Unjoined'}">
+                        ${a.joined ? '✓' : '✕'}
+                      </span>
+                      <span class="attendee-name">${a.memberName}</span>
+                      <span class="text-muted small">#${a.memberId}</span>
+                      ${a.refundAmount && Number(a.refundAmount) > 0
+                        ? `<span class="badge bg-warning text-dark refund-badge">Refund: ${a.refundAmount}</span>`
+                        : ''
+                      }
+                    </div>
+                    <span class="badge ${a.joined ? 'bg-success' : 'bg-danger'}">
+                      ${a.joined ? 'Joined' : 'Unjoined'}
+                    </span>
+                  </li>
+                `).join('')}
+              </ul>
+              <div class="card-footer d-flex justify-content-between align-items-center">
+                <span class="small text-muted">${joinedCount}/${attendees.length} joined</span>
+                <span class="small text-muted">${parts.year}-${pad2(parts.month)}-${pad2(parts.day)}</span>
+              </div>
+            </div>
+          `;
+          grid.appendChild(col);
+        });
+
+      } catch (err) {
+        console.error(err);
+        document.getElementById('loading').style.display = 'none';
+        showAlert('danger', err.message || 'Unexpected error while loading schedules.');
+      }
+    }
+
+    // Init
+    updateSubtitle();
+    updateUrl();
+    fetchAndRender();
+  </script>
 </body>
 </html>

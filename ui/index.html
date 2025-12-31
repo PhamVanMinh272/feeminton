@@ -83,7 +83,7 @@
             <span class="badge bg-primary rounded-pill">ID: ${g.id}</span>
           `;
           // Navigate to schedules.html in the same path and preserve API base via query arg
-          const href = `ui/schedules.html?groupId=${encodeURIComponent(g.id)}&groupName=${encodeURIComponent(g.name)}`;
+          const href = `feeminton/ui/schedules.html?groupId=${encodeURIComponent(g.id)}&groupName=${encodeURIComponent(g.name)}`;
           a.href = API.link(href);
           container.appendChild(a);
         });

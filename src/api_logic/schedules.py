@@ -1,10 +1,12 @@
+from src.schemas.pydantic_models.schedules import SearchScheduleModel
 from src.settings import logger
 from src.services.schedules import ScheduleService
 from src.common.db_connection import db_context_manager
 
 @db_context_manager
 def get_schedules(conn, **kwargs):
-    data = ScheduleService(conn).get_schedules()
+    params = SearchScheduleModel(**kwargs)
+    data = ScheduleService(conn).get_schedules(params)
     logger.info(f"Fetched schedules: {data}")
     return {"data": data}
 

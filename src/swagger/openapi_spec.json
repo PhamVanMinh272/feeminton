@@ -29,6 +29,32 @@
     "/schedules": {
       "get" : {
         "tags": ["Schedules"],
+        "parameters": [
+          {
+            "name": "groupId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+            {
+                "name": "month",
+                "in": "query",
+                "required": false,
+                "schema": {
+                "type": "integer"
+                }
+            }
+        ],
         "responses": {},
         "security": []
       },
