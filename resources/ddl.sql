@@ -19,21 +19,29 @@ CREATE TABLE IF NOT EXISTS members (
     nickname TEXT NOT NULL
 );
 
--- Reservations table: each reservation has a date and number of courts
-CREATE TABLE IF NOT EXISTS reservations (
+---- Reservations table: each reservation has a date and number of courts
+--CREATE TABLE IF NOT EXISTS reservations (
+--    id INTEGER PRIMARY KEY AUTOINCREMENT,
+--    group_id INTEGER NOT NULL,
+--    reservation_date date NOT NULL,
+--    court_count INTEGER DEFAULT 1
+--);
+
+
+CREATE TABLE IF NOT EXISTS schedules (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    date TEXT NOT NULL,
-    court_count INTEGER DEFAULT 1
+    group_id INTEGER NOT NULL,
+    schedule_date date NOT NULL
 );
 
 -- Attendance table: tracks who joined/unjoined each reservation
 CREATE TABLE IF NOT EXISTS attendance (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    reservation_id INTEGER NOT NULL,
+    schedule_id INTEGER NOT NULL,
     member_id INTEGER NOT NULL,
     joined BOOLEAN DEFAULT 1,
     refund_amount INTEGER DEFAULT 0,
-    FOREIGN KEY(reservation_id) REFERENCES reservations(id),
+    FOREIGN KEY(schedule_id) REFERENCES schedules(id),
     FOREIGN KEY(member_id) REFERENCES members(id)
 );
 

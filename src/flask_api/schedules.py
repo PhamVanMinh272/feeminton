@@ -1,24 +1,24 @@
 from flask import request, Blueprint
 
-from src.api_logic import reservations
+from src.api_logic import schedules
 
 
-reservations_router = Blueprint("reservations", __name__)
+schedules_router = Blueprint("reservations", __name__)
 
 
-@reservations_router.route("", methods=["GET"])
+@schedules_router.route("", methods=["GET"])
 def get_all_reservations():
-    return reservations.get_reservations()
+    return schedules.get_schedules()
 
-@reservations_router.route("", methods=["POST"])
+@schedules_router.route("", methods=["POST"])
 def create_reservation():
-    return reservations.create_reservation(reservation_data=request.json)
+    return schedules.create_schedule(schedule_data=request.json)
 
-@reservations_router.route("/attendance/<int:attendance_id>", methods=["PATCH"])
+@schedules_router.route("/attendance/<int:attendance_id>", methods=["PATCH"])
 def patch_attendance(attendance_id):
     data = request.json
     joined = data.get("joined")
-    return reservations.patch_attendance(attendance_id=attendance_id, joined=joined)
+    return schedules.patch_attendance(attendance_id=attendance_id, joined=joined)
 
 
 

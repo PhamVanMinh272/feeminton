@@ -26,19 +26,19 @@
         "security": []
       }
     },
-    "/reservations": {
+    "/schedules": {
       "get" : {
-        "tags": ["Reservations"],
+        "tags": ["Schedules"],
         "responses": {},
         "security": []
       },
       "post": {
-        "tags": ["Reservations"],
+        "tags": ["Schedules"],
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/NewReservation"
+                "$ref": "#/components/schemas/NewSchedule"
               }
             }
           }
@@ -76,12 +76,16 @@
   },
   "components" : {
     "schemas": {
-      "NewReservation": {
+      "NewSchedule": {
         "type": "object",
         "properties": {
-          "date": {
+          "scheduleDate": {
             "type": "string",
-            "example": "2023-10-20T14:48:00.000Z"
+            "example": "2023-10-20T20:00:00.000Z"
+          },
+          "groupId": {
+            "type": "integer",
+            "example": 1
           }
         }
       },

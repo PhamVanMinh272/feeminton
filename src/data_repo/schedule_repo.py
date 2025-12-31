@@ -1,34 +1,38 @@
-from src.schemas.pydantic_models.reservations import NewReservationModel
-class ReservationRepo:
+from typing import Optional, List, Dict
+from src.schemas.pydantic_models.schedules import NewScheduleModel
+
+
+class ScheduleRepo:
 
     def __init__(self, conn):
         self._conn = conn
         self._cursor = conn.cursor()
 
-    def get_all_reservations(self) -> list[dict]:
+    def get_all_schedules(self) -> list[dict]:
         self._cursor.execute(
             """
-            SELECT reservations.id, date
-            FROM reservations 
-            ORDER BY date DESC"""
+            SELECT schedules.id, schedule_date
+            FROM schedules 
+            ORDER BY schedule_date DESC"""
         )
         rows = self._cursor.fetchall()
         sections = [
             {
                 "id": row[0],
-                "date": row[1]
+                "scheduleDate": row[1]
             }
             for row in rows
         ]
         return sections
 
-    def create_reservation(self, reservation_data: NewReservationModel) -> int:
+    def create_schedule(self, schedule_data: NewScheduleModel) -> int:
         self._cursor.execute(
             """
-            INSERT INTO reservations (date) VALUES (?)
+            INSERT INTO schedules (schedule_date, group_id) VALUES (?, ?)
             """,
             (
-                reservation_data.date.strftime("%Y-%m-%dT%H:%M:%S"),
+                schedule_data.schedule_date.strftime("%Y-%m-%dT%H:%M:%S"),
+                schedule_data.group_id,
             ),
         )
         reservation_id = self._cursor.lastrowid
@@ -36,30 +40,52 @@ class ReservationRepo:
         self._cursor.connection.commit()
         return reservation_id
 
-    def create_attendances_for_all_members(self, reservation_id: int):
+    def create_attendances_for_all_members(self, schedule_id: int):
         self._cursor.execute(
             """
-            INSERT INTO attendance (member_id, reservation_id, joined, refund_amount)
+            INSERT INTO attendance (member_id, schedule_id, joined, refund_amount)
             SELECT id, ?, 1, 0 FROM members
             """,
-            (reservation_id,),
+            (schedule_id,),
         )
         # commit
         self._cursor.connection.commit()
         return
 
-    def get_attendances_by_reservation_id(self, reservation_id: int) -> list[dict]:
-        self._cursor.execute(
-            """
-            SELECT attendance.id, members.id, members.name, attendance.joined, attendance.refund_amount
-            FROM attendance
-            JOIN members ON attendance.member_id = members.id
-            WHERE attendance.reservation_id = ?
-            """,
-            (reservation_id,),
-        )
+    def get_attendances_by_schedule_id(
+            self,
+            schedule_id: int,
+            start_date: Optional[str] = None,
+            end_date: Optional[str] = None
+    ) -> List[Dict]:
+        where = ["a.schedule_id = ?"]
+        params = [schedule_id]
+
+        if start_date and end_date:
+            if end_date < start_date:
+                raise ValueError("end_date must be >= start_date.")
+            where.append("DATE(r.schedule_date) BETWEEN DATE(?) AND DATE(?)")
+            params.extend([start_date, end_date])
+        elif start_date:
+            where.append("DATE(r.schedule_date) >= DATE(?)")
+            params.append(start_date)
+        elif end_date:
+            where.append("DATE(r.schedule_date) <= DATE(?)")
+            params.append(end_date)
+
+        sql = f"""
+            SELECT
+                a.id, m.id, m.nickname, a.joined, a.refund_amount
+            FROM attendance AS a
+            JOIN members      AS m ON a.member_id = m.id
+            JOIN schedules AS r ON r.id = a.schedule_id
+            WHERE {' AND '.join(where)}
+            ORDER BY m.nickname COLLATE NOCASE, a.id
+        """
+        self._cursor.execute(sql, params)
         rows = self._cursor.fetchall()
-        attendances = [
+
+        return [
             {
                 "attendanceId": row[0],
                 "memberId": row[1],
@@ -69,7 +95,6 @@ class ReservationRepo:
             }
             for row in rows
         ]
-        return attendances
 
     def update_attendance(self, attendance_id: int, joined: bool, refund_amount: int):
         self._cursor.execute(

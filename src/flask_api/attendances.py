@@ -1,6 +1,6 @@
 from flask import request, Blueprint
 
-from src.api_logic import reservations
+from src.api_logic import schedules
 
 
 attendances_router = Blueprint("attendances", __name__)

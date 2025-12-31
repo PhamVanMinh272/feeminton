@@ -1,0 +1,21 @@
+from src.settings import logger
+from src.services.schedules import ScheduleService
+from src.common.db_connection import db_context_manager
+
+@db_context_manager
+def get_schedules(conn, **kwargs):
+    data = ScheduleService(conn).get_schedules()
+    logger.info(f"Fetched schedules: {data}")
+    return {"data": data}
+
+@db_context_manager
+def create_schedule(conn, schedule_data, **kwargs):
+    reservation_id = ScheduleService(conn).create_schedule(schedule_data)
+    logger.info(f"Created schedule with ID: {reservation_id}")
+    return {"scheduleId": reservation_id}
+
+@db_context_manager
+def patch_attendance(conn, attendance_id, joined, **kwargs):
+    ScheduleService(conn).patch_attendance(attendance_id, joined)
+    logger.info(f"Patched attendance ID: {attendance_id} with joined: {joined}")
+    return {"status": "success"}
