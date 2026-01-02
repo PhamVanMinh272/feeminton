@@ -32,7 +32,10 @@
       </div>
       <div class="small text-muted mt-2">Fetching groups…</div>
     </div>
+    <div id="feesContainer" class="mt-4"></div>
   </div>
+  
+
 
   <!-- Bootstrap JS (optional) -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
@@ -73,19 +76,28 @@
           return;
         }
 
-        // Render as Bootstrap list-group
         container.innerHTML = '';
         groups.forEach(g => {
-          const a = document.createElement('a');
-          a.className = 'list-group-item list-group-item-action group-item d-flex justify-content-between align-items-center';
-          a.innerHTML = `
-            <span>${g.name}</span>
-            <span class="badge bg-primary rounded-pill">ID: ${g.id}</span>
+          const item = document.createElement('div');
+          item.className = 'list-group-item d-flex justify-content-between align-items-center';
+
+          item.innerHTML = `
+            <div>
+              <strong>${g.name}</strong>
+              <span class="badge bg-primary ms-2">ID: ${g.id}</span>
+            </div>
+            <div>
+              <a href="${API.link(`feeminton/ui/schedules.html?groupId=${encodeURIComponent(g.id)}&groupName=${encodeURIComponent(g.name)}`)}"
+                 class="btn btn-sm btn-outline-secondary me-2">View schedules</a>
+              <button class="btn btn-sm btn-primary">View next bill</button>
+            </div>
           `;
-          // Navigate to schedules.html in the same path and preserve API base via query arg
-          const href = `feeminton/ui/schedules.html?groupId=${encodeURIComponent(g.id)}&groupName=${encodeURIComponent(g.name)}`;
-          a.href = API.link(href);
-          container.appendChild(a);
+
+          // Attach click handler for "View next bill"
+          const btn = item.querySelector('button');
+          btn.addEventListener('click', () => loadFees(g.id));
+
+          container.appendChild(item);
         });
 
       } catch (err) {
@@ -96,6 +108,134 @@
     }
 
     loadGroups();
+  </script>
+
+  <script>
+    async function loadGroups() {
+      const loadingEl = document.getElementById('loading');
+      const container = document.getElementById('groupsContainer');
+
+      try {
+        const res = await fetch(API.join('/groups'), {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        if (!res.ok) {
+          throw new Error(`Failed to fetch groups: ${res.status} ${res.statusText}`);
+        }
+
+        const payload = await res.json();
+        const groups = Array.isArray(payload?.data) ? payload.data : [];
+
+        loadingEl.style.display = 'none';
+
+        if (groups.length === 0) {
+          container.innerHTML = '<div class="list-group-item text-muted">No groups found.</div>';
+          return;
+        }
+
+        container.innerHTML = '';
+        groups.forEach(g => {
+          const item = document.createElement('div');
+          item.className = 'list-group-item d-flex justify-content-between align-items-center';
+
+          item.innerHTML = `
+            <div>
+              <strong>${g.name}</strong>
+              <span class="badge bg-primary ms-2">ID: ${g.id}</span>
+            </div>
+            <div>
+              <a href="${API.link(`feeminton/ui/schedules.html?groupId=${encodeURIComponent(g.id)}&groupName=${encodeURIComponent(g.name)}`)}"
+                 class="btn btn-sm btn-outline-secondary me-2">View schedules</a>
+              <button class="btn btn-sm btn-primary">View next bill</button>
+            </div>
+          `;
+
+          // Attach click handler for "View next bill"
+          const btn = item.querySelector('button');
+          btn.addEventListener('click', () => loadFees(g.id));
+
+          container.appendChild(item);
+        });
+
+      } catch (err) {
+        loadingEl.style.display = 'none';
+        console.error(err);
+        showAlert('danger', err.message || 'Unexpected error while loading groups.');
+      }
+    }
+
+    function getNextYearMonth() {
+      const now = new Date();
+      let year = now.getFullYear();
+      let month = now.getMonth() + 2; // next month
+
+      if (month > 12) {
+        month = 1;
+        year += 1;
+      }
+      return { year, month };
+    }
+
+    async function loadFees(groupId) {
+      const { year, month } = getNextYearMonth();
+      const container = document.getElementById('feesContainer');
+
+      try {
+        const res = await fetch(API.join(`/groups/${groupId}/fees/${year}/${month}`), {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        if (!res.ok) {
+          throw new Error(`Failed to fetch fees: ${res.status} ${res.statusText}`);
+        }
+
+        const payload = await res.json();
+        const fees = Array.isArray(payload?.data) ? payload.data : [];
+
+        container.innerHTML = '';
+
+        if (fees.length === 0) {
+          container.innerHTML = '<div class="alert alert-info">No fee data found for next month.</div>';
+          return;
+        }
+
+        let table = `
+          <h5 class="mb-3">Fees for ${month}/${year}</h5>
+          <div class="table-responsive">
+            <table class="table table-striped table-bordered align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>Member</th>
+                  <th>Fee per Schedule</th>
+                  <th>Schedules</th>
+                  <th>Total Refund (Prev Month)</th>
+                  <th>Estimated Fee</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${fees.map(f => `
+                  <tr>
+                    <td>${f.memberNickname}</td>
+                    <td>${f.memberFee}</td>
+                    <td>${f.scheduleCount}</td>
+                    <td>${f.totalRefund}</td>
+                    <td><strong>${f.estimatedFee}</strong></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+        container.innerHTML = table;
+
+      } catch (err) {
+        console.error(err);
+        showAlert('danger', err.message || 'Unexpected error while loading fees.');
+      }
+    }
   </script>
 </body>
 </html>

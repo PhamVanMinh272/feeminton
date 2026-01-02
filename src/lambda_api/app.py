@@ -205,7 +205,12 @@ if __name__ == "__main__":
     # test_event = {"action": "list_reservations"}
     # test_event = {"action": "unjoin", "member_id": 2, "reservation_id": 1}
     # test_event = {"action": "monthly_refund", "member_id": 2, "month": "2024-06"}
-    test_event = {"action": "update_refund_status", "member_id": 2, "status": "sent", "month": "2024-06"}
+    test_event = {
+        "action": "update_refund_status",
+        "member_id": 2,
+        "status": "sent",
+        "month": "2024-06",
+    }
     result = lambda_handler(test_event, None)
     body = json.dumps(result, indent=4, ensure_ascii=False)
     print(body)

@@ -6,7 +6,9 @@ from pydantic import BaseModel, Field, model_validator
 
 class NewScheduleModel(BaseModel):
     group_id: int = Field(alias="groupId", description="ID of the group")
-    schedule_date: datetime = Field(alias="scheduleDate", description="Date of the schedules")
+    schedule_date: datetime = Field(
+        alias="scheduleDate", description="Date of the schedules"
+    )
 
 
 class SearchScheduleModel(BaseModel):

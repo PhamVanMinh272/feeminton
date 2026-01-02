@@ -1,4 +1,3 @@
-
 import datetime
 import calendar
 from typing import List, Dict, Optional, Tuple
@@ -14,8 +13,9 @@ class ScheduleService:
         self.schedules = None
 
     @staticmethod
-    def _month_range(year: Optional[int] = None, month: Optional[int] = None) -> Tuple[
-        datetime.date, datetime.date]:
+    def _month_range(
+        year: Optional[int] = None, month: Optional[int] = None
+    ) -> Tuple[datetime.date, datetime.date]:
         """
         Returns (first_day, last_day) for the specified year/month.
         If year or month is None, defaults to the current month.
@@ -43,10 +43,7 @@ class ScheduleService:
         """
         return ScheduleService._month_range()
 
-    def get_schedules(
-            self,
-            params: SearchScheduleModel
-    ) -> List[Dict]:
+    def get_schedules(self, params: SearchScheduleModel) -> List[Dict]:
         """
         Get reservations within a date range (defaults to the current month),
         and attach their associated attendances.
@@ -66,7 +63,9 @@ class ScheduleService:
 
         # Filter reservations within [start_dt, end_dt]
         filtered: List[Dict] = []
-        self.schedules = ScheduleRepo(self._conn).get_all_schedules(group_id=params.group_id)
+        self.schedules = ScheduleRepo(self._conn).get_all_schedules(
+            group_id=params.group_id
+        )
 
         for r in self.schedules or []:
             r_date_str = r.get("scheduleDate")
@@ -74,7 +73,9 @@ class ScheduleService:
                 # Skip if reservation has no date
                 continue
             try:
-                r_date = datetime.date.fromisoformat(r_date_str[:10])  # handle potential 'YYYY-MM-DD...' strings
+                r_date = datetime.date.fromisoformat(
+                    r_date_str[:10]
+                )  # handle potential 'YYYY-MM-DD...' strings
             except ValueError:
                 # Skip malformed date strings
                 continue
@@ -105,7 +106,9 @@ class ScheduleService:
         schedule = ScheduleRepo(self._conn).get_schedule_by_id(schedule_id)
         if not schedule:
             return None
-        attendances = ScheduleRepo(self._conn).get_attendances_by_schedule_id(schedule_id)
+        attendances = ScheduleRepo(self._conn).get_attendances_by_schedule_id(
+            schedule_id
+        )
         schedule["attendances"] = attendances
         return schedule
 
@@ -137,7 +140,9 @@ class ScheduleService:
         refund_amount = 0
         ScheduleRepo(self._conn).update_attendance(attendance_id, joined, refund_amount)
 
-        logger.info(f"Calculating refund for attendance ID {attendance_id} with joined={joined}")
+        logger.info(
+            f"Calculating refund for attendance ID {attendance_id} with joined={joined}"
+        )
         schedule = self._get_schedule_by_attendance_id(attendance_id)
         self._update_refunds_for_dropouts(schedule["id"])
 
@@ -171,18 +176,27 @@ class ScheduleService:
         # update refund amounts for other dropouts
 
         schedule = ScheduleRepo(self._conn).get_schedule_by_id(schedule_id)
-        all_attendances = ScheduleRepo(self._conn).get_attendances_by_schedule_id(schedule_id)
+        all_attendances = ScheduleRepo(self._conn).get_attendances_by_schedule_id(
+            schedule_id
+        )
         drop_out_count = sum(1 for att in all_attendances if not att["joined"])
-        refund_amount = int(min_fee_groups.get(schedule["groupId"], 50) / drop_out_count) if drop_out_count > 0 else 0
+        refund_amount = (
+            int(min_fee_groups.get(schedule["groupId"], 50) / drop_out_count)
+            if drop_out_count > 0
+            else 0
+        )
         # check max refund
         max_refund = max_refund_groups.get(schedule["groupId"], 50)
         if refund_amount > max_refund:
             refund_amount = max_refund
         for att in all_attendances:
             if not att["joined"]:
-                ScheduleRepo(self._conn).update_attendance(att["attendanceId"], False, refund_amount)
-        logger.info(f"Updated refund amounts for dropouts in schedule ID {schedule_id} to {refund_amount}")
-
+                ScheduleRepo(self._conn).update_attendance(
+                    att["attendanceId"], False, refund_amount
+                )
+        logger.info(
+            f"Updated refund amounts for dropouts in schedule ID {schedule_id} to {refund_amount}"
+        )
 
     def delete_schedule(self, schedule_id: int):
         ScheduleRepo(self._conn).delete_schedule(schedule_id)

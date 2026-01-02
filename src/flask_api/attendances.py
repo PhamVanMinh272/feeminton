@@ -5,6 +5,7 @@ from src.api_logic import schedules
 
 attendances_router = Blueprint("attendances", __name__)
 
+
 @attendances_router.route("/<int:attendance_id>", methods=["PATCH"])
 def patch_attendance(attendance_id):
     data = request.json

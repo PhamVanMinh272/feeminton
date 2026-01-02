@@ -71,17 +71,19 @@ function renderMember(data) {
   const groupNameForLink = qsGroupName ?? '';
 
   // Navigate to schedules (preserve api via API.link)
-  const toSchedulesLink = document.getElementById('toSchedulesLink');
-  if (toSchedulesLink) {
-    const params = new URLSearchParams({
-      groupId: groupIdForLink,
-      groupName: groupNameForLink,
-    });
-    if (qsYear)  params.set('year', qsYear);
-    if (qsMonth) params.set('month', qsMonth);
-
-    toSchedulesLink.href = apiLink(`feeminton/ui/schedules.html?${params.toString()}`);
-  }
+//  const toSchedulesLink = document.getElementById('toSchedulesLink');
+//  if (toSchedulesLink) {
+//    const params = new URLSearchParams({
+//      groupId: groupIdForLink,
+//      groupName: groupNameForLink,
+//    });
+//    if (qsGroupId) params.set('groupId', qsGroupId);
+//    if (qsGroupName) params.set('groupName', qsGroupName);
+//    if (qsYear)  params.set('year', qsYear);
+//    if (qsMonth) params.set('month', qsMonth);
+//
+//    toSchedulesLink.href = apiLink(`feeminton/ui/schedules.html?${params.toString()}`);
+//  }
 
   // Back link — if we arrived from schedules, go back there; else default to index
   const backLink = document.getElementById('backLink');

@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS members (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     group_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
+    member_fee INTEGER DEFAULT 0,
     nickname TEXT NOT NULL
 );
 
@@ -23,7 +24,7 @@ CREATE TABLE IF NOT EXISTS schedules (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     group_id INTEGER NOT NULL,
     schedule_date date NOT NULL,
-    description TEXT,
+    description TEXT
 );
 
 -- Attendance table: tracks who joined/unjoined each reservation

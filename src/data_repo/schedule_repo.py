@@ -17,13 +17,7 @@ class ScheduleRepo:
             (group_id,),
         )
         rows = self._cursor.fetchall()
-        sections = [
-            {
-                "id": row[0],
-                "scheduleDate": row[1]
-            }
-            for row in rows
-        ]
+        sections = [{"id": row[0], "scheduleDate": row[1]} for row in rows]
         return sections
 
     def get_schedule_by_id(self, schedule_id: int) -> Optional[dict]:
@@ -91,10 +85,10 @@ class ScheduleRepo:
         return to_insert
 
     def get_attendances_by_schedule_id(
-            self,
-            schedule_id: int,
-            start_date: Optional[str] = None,
-            end_date: Optional[str] = None
+        self,
+        schedule_id: int,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
     ) -> List[Dict]:
         where = ["a.schedule_id = ?"]
         params = [schedule_id]

@@ -19,6 +19,39 @@
         "security": []
       }
     },
+    "/groups/{group_id}/fees/{year}/{month}": {
+      "get" : {
+        "tags": ["Groups"],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "month",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {},
+        "security": []
+      }
+    },
     "/members" : {
       "get" : {
         "tags": ["Members"],

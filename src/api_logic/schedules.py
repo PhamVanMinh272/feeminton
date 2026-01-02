@@ -3,6 +3,7 @@ from src.settings import logger
 from src.services.schedules import ScheduleService
 from src.common.db_connection import db_context_manager
 
+
 @db_context_manager
 def get_schedules(conn, **kwargs):
     params = SearchScheduleModel(**kwargs)

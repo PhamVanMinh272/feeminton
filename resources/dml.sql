@@ -15,21 +15,21 @@ INSERT INTO users (name, gender) VALUES
 ('Nghị', 'male'),
 ('Tú', 'female');
 
-INSERT INTO members (group_id, user_id, nickname) VALUES
-(1, 1, 'Minh'),
-(1, 2, 'Đạt'),
-(1, 9, 'Thảo'),
-(1, 10, 'Trí'),
-(1, 11, 'Nghị'),
-(1, 12, 'Tú'),
-(2, 1, 'Minh'),
-(2, 2, 'Đạt'),
-(2, 3, 'Thiên'),
-(2, 4, 'Tâm'),
-(2, 5, 'Tấn'),
-(2, 6, 'Thoại'),
-(2, 7, 'Giao'),
-(2, 8, 'Ân');
+INSERT INTO members (group_id, user_id, nickname, member_fee) VALUES
+(1, 1, 'Minh', 50),
+(1, 2, 'Đạt', 50),
+(1, 9, 'Thảo', 50),
+(1, 10, 'Trí', 50),
+(1, 11, 'Nghị', 50),
+(1, 12, 'Tú', 50),
+(2, 1, 'Minh', 60),
+(2, 2, 'Đạt', 60),
+(2, 3, 'Thiên', 60),
+(2, 4, 'Tâm', 60),
+(2, 5, 'Tấn', 60),
+(2, 6, 'Thoại', 60),
+(2, 7, 'Giao', 50),
+(2, 8, 'Ân', 50);
 
 
 -- Insert schedules for group 1 (first Tuesdays)

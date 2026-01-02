@@ -13,7 +13,7 @@ def run_ddl():
     conn = connect_db(SQLITE_PATH)
     cursor = conn.cursor()
 
-    with open(DDL_PATH, "r", encoding='utf-8') as file:
+    with open(DDL_PATH, "r", encoding="utf-8") as file:
         ddl_script = file.read()
     cursor.executescript(ddl_script)
     conn.commit()

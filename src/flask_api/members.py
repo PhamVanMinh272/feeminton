@@ -9,6 +9,7 @@ members_router = Blueprint("members", __name__)
 def get_members():
     return members.get_members()
 
+
 @members_router.route("/<int:member_id>", methods=["GET"])
 def get_member(member_id):
     return members.get_member(member_id)
