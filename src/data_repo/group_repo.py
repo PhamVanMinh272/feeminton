@@ -97,20 +97,32 @@ class GroupRepo:
             prev_month = month - 1
             prev_year = year
 
-        sql = """
+        # --- Query 1: schedules in current month ---
+        sql_schedules = """
             SELECT
                 m.id AS member_id,
                 m.nickname AS member_nickname,
                 m.member_fee AS member_fee,
-                COUNT(DISTINCT s.id) AS schedule_count,
-                IFNULL(SUM(r.refund_amount), 0) AS total_refund
+                COUNT(s.id) AS schedule_count
             FROM members AS m
-            -- schedules in current month
             LEFT JOIN schedules AS s
                 ON s.group_id = m.group_id
                 AND strftime('%Y', s.schedule_date) = ?
                 AND strftime('%m', s.schedule_date) = ?
-            -- refunds from previous month
+            WHERE m.group_id = ?
+            GROUP BY m.id, m.nickname, m.member_fee
+            ORDER BY m.nickname COLLATE NOCASE
+        """
+        params = (str(year), f"{month:02d}", group_id)
+        self._cursor.execute(sql_schedules, params)
+        schedule_rows = self._cursor.fetchall()
+
+        # --- Query 2: refunds in previous month ---
+        sql_refunds = """
+            SELECT
+                m.id AS member_id,
+                IFNULL(SUM(r.refund_amount), 0) AS total_refund
+            FROM members AS m
             LEFT JOIN schedules AS ps
                 ON ps.group_id = m.group_id
                 AND strftime('%Y', ps.schedule_date) = ?
@@ -120,18 +132,18 @@ class GroupRepo:
                 AND r.member_id = m.id
             WHERE m.group_id = ?
             GROUP BY m.id
-            ORDER BY m.nickname COLLATE NOCASE
         """
-        params = (
-            str(year), f"{month:02d}",  # schedules for current month
-            str(prev_year), f"{prev_month:02d}",  # refunds for previous month
-            group_id,
-        )
-        self._cursor.execute(sql, params)
-        rows = self._cursor.fetchall()
+        params = (str(prev_year), f"{prev_month:02d}", group_id)
+        self._cursor.execute(sql_refunds, params)
+        refund_rows = self._cursor.fetchall()
 
+        # Convert refund_rows to dict for quick lookup
+        refund_map = {member_id: total_refund for member_id, total_refund in refund_rows}
+
+        # --- Merge results ---
         member_fees = []
-        for member_id, member_nickname, member_fee, schedule_count, total_refund in rows:
+        for member_id, member_nickname, member_fee, schedule_count in schedule_rows:
+            total_refund = refund_map.get(member_id, 0)
             estimated_fee = (member_fee * schedule_count) - total_refund
             member_fees.append({
                 "memberId": member_id,
