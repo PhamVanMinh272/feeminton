@@ -1,0 +1,222 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Badminton Group Fee & Refund Lambda with API Gateway
+
+Globals:
+  Function:
+    Timeout: 20
+    MemorySize: 128
+    Runtime: python3.13
+    Environment:
+      Variables:
+        ENV: dev
+    LoggingConfig:
+      LogFormat: JSON
+  HttpApi:
+    Auth:
+      Authorizer: NONE
+
+Resources:
+  FeemintonRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: S3AccessPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                #                Resource: !Sub '${ProductsS3.Arn}/*'
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - ec2:CreateNetworkInterface
+                  - ec2:DescribeNetworkInterfaces
+                  - ec2:DeleteNetworkInterface
+                Resource: "*"
+
+  FeemintonLambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Lambda access to EFS
+      VpcId: vpc-01dd6b4d10a92c69c
+
+  FeemintonEFSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: EFS ingress from Lambda
+      VpcId: vpc-01dd6b4d10a92c69c
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 2049
+          ToPort: 2049
+          SourceSecurityGroupId: !Ref FeemintonLambdaSecurityGroup
+
+  FeemintonEFS:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      Encrypted: true
+      PerformanceMode: generalPurpose
+
+  FeemintonEFSMountTarget:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref FeemintonEFS
+      SubnetId: subnet-01d9b42eaf1265b2f
+      SecurityGroups:
+        - !Ref FeemintonEFSSecurityGroup
+
+  FeemintonDBAccessPoint:
+    Type: AWS::EFS::AccessPoint
+    Properties:
+      FileSystemId: !Ref FeemintonEFS
+      PosixUser:
+        Uid: "1000"
+        Gid: "1000"
+      RootDirectory:
+        CreationInfo:
+          OwnerGid: "1000"
+          OwnerUid: "1000"
+          Permissions: "750"
+        Path: "/lambda"
+
+  ApiFeemintonDeployment:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: dev
+      Cors:
+        AllowMethods: "'OPTIONS,POST,GET,PUT,DELETE'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+        AllowOrigin: "'*'"
+
+  FeemintonSwaggerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./src/swagger
+      Handler: main.lambda_handler
+      Architectures:
+        - x86_64
+      Events:
+        SwaggerGet:
+          Type: Api
+          Properties:
+            Path: /api/swagger
+            Method: get
+            RestApiId: !Ref ApiFeemintonDeployment
+
+  FeemintonEFSHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      Role: !GetAtt FeemintonRole.Arn
+      CodeUri: ./
+      Handler: src/lambda_api/efs_handler.lambda_handler
+      Timeout: 100
+      Architectures:
+        - x86_64
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref FeemintonLambdaSecurityGroup
+        SubnetIds:
+          - subnet-01d9b42eaf1265b2f
+      FileSystemConfigs:
+        - Arn: !GetAtt FeemintonDBAccessPoint.Arn
+          LocalMountPath: /mnt/efs
+
+  FeemintonGroupFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Role: !GetAtt FeemintonRole.Arn
+      CodeUri: ./
+      Handler: src/lambda_api/groups.lambda_handler
+      Architectures:
+        - x86_64
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref FeemintonLambdaSecurityGroup
+        SubnetIds:
+          - subnet-01d9b42eaf1265b2f
+      FileSystemConfigs:
+        - Arn: !GetAtt FeemintonDBAccessPoint.Arn
+          LocalMountPath: /mnt/efs
+      Events:
+        getGroups:
+          Type: Api
+          Properties:
+            Path: /api/groups
+            Method: get
+            RestApiId: !Ref ApiFeemintonDeployment
+        getGroupFees:
+          Type: Api
+          Properties:
+            Path: /api/groups/{group_id}/fees/{year}/{month}
+            Method: get
+            RestApiId: !Ref ApiFeemintonDeployment
+
+  FeemintonSchedulesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Role: !GetAtt FeemintonRole.Arn
+      CodeUri: ./
+      Handler: src/lambda_api/schedules.lambda_handler
+      Architectures:
+        - x86_64
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref FeemintonLambdaSecurityGroup
+        SubnetIds:
+          - subnet-01d9b42eaf1265b2f
+      FileSystemConfigs:
+        - Arn: !GetAtt FeemintonDBAccessPoint.Arn
+          LocalMountPath: /mnt/efs
+      Events:
+        getSchedules:
+          Type: Api
+          Properties:
+            Path: /api/schedules
+            Method: get
+            RestApiId: !Ref ApiFeemintonDeployment
+        getSchedule:
+          Type: Api
+          Properties:
+            Path: /api/schedules/{schedule_id}
+            Method: get
+            RestApiId: !Ref ApiFeemintonDeployment
+        createSchedule:
+          Type: Api
+          Properties:
+            Path: /api/schedules
+            Method: post
+            RestApiId: !Ref ApiFeemintonDeployment
+        patchAttendance:
+          Type: Api
+          Properties:
+            Path: /api/attendances/{attendance_id}
+            Method: patch
+            RestApiId: !Ref ApiFeemintonDeployment
+        deleteSchedule:
+          Type: Api
+          Properties:
+            Path: /api/schedules/{schedule_id}
+            Method: delete
+            RestApiId: !Ref ApiFeemintonDeployment

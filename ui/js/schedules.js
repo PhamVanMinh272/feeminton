@@ -49,7 +49,7 @@ function setTitle() {
 function setBackLink() {
   const backLink = document.getElementById('backLink');
   if (!backLink) return;
-  const target = 'feeminton/ui/index.html'; // adjust if needed
+  const target = 'index.html'; // adjust if needed
   backLink.href = (window.API && typeof window.API.link === 'function')
     ? window.API.link(target)
     : target;
@@ -153,7 +153,7 @@ function renderScheduleCard(s) {
               <span class="joined-icon ${a.joined ? 'joined-true' : 'joined-false'}" title="${a.joined ? 'Joined' : 'Unjoined'}">${a.joined ? '✓' : '✕'}</span>
               <!-- 🔗 Make the member name clickable -->
               <a
-                href="${apiLink(`feeminton/ui/member_details.html?memberId=${encodeURIComponent(a.memberId)}&groupId=${encodeURIComponent(s.groupId)}&groupName=${encodeURIComponent(state.groupName || '')}`)}"
+                href="${apiLink(`member_details.html?memberId=${encodeURIComponent(a.memberId)}&groupId=${encodeURIComponent(s.groupId)}&groupName=${encodeURIComponent(state.groupName || '')}`)}"
                 class="attendee-name text-decoration-none">${a.memberName}</a>
               <span class="badge bg-warning text-dark refund-badge">Refund: ${Number(a.refundAmount ?? 0)}</span>
 

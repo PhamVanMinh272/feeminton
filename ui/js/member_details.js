@@ -82,7 +82,7 @@ function renderMember(data) {
 //    if (qsYear)  params.set('year', qsYear);
 //    if (qsMonth) params.set('month', qsMonth);
 //
-//    toSchedulesLink.href = apiLink(`feeminton/ui/schedules.html?${params.toString()}`);
+//    toSchedulesLink.href = apiLink(`schedules.html?${params.toString()}`);
 //  }
 
   // Back link — if we arrived from schedules, go back there; else default to index
@@ -110,7 +110,7 @@ function renderMember(data) {
     if (qsYear)  params.set('year', qsYear);
     if (qsMonth) params.set('month', qsMonth);
 
-    backLink.href = apiLink(`feeminton/ui/schedules.html?${params.toString()}`);
+    backLink.href = apiLink(`schedules.html?${params.toString()}`);
   }
 }
 

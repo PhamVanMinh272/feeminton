@@ -150,7 +150,7 @@
       const month     = qs.get('month') || String(new Date().getMonth() + 1);
 
       const params = new URLSearchParams({ groupId, groupName, year, month }).toString();
-      const href = `feeminton/ui/new_schedules.html?${params}`;
+      const href = `new_schedules.html?${params}`;
       const btn = document.getElementById('createScheduleBtn');
       // Preserve ?api=... via API.link (config.js)
       btn.href = API.link(href);

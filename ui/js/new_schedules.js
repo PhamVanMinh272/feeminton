@@ -46,7 +46,7 @@ function daysInMonth(year, month) {
 // ---------- Init UI ----------
 document.getElementById('title').textContent = groupName ? `Create Schedule • ${groupName} (#${groupId})` : 'Create Schedule';
 document.getElementById('subtitle').textContent = `Target month: ${yearQS}-${String(monthQS).padStart(2, '0')}`;
-document.getElementById('backLink').href = API.link(`feeminton/ui/schedules.html?groupId=${encodeURIComponent(groupId)}&groupName=${encodeURIComponent(groupName)}&year=${encodeURIComponent(yearQS)}&month=${encodeURIComponent(monthQS)}`);
+document.getElementById('backLink').href = API.link(`schedules.html?groupId=${encodeURIComponent(groupId)}&groupName=${encodeURIComponent(groupName)}&year=${encodeURIComponent(yearQS)}&month=${encodeURIComponent(monthQS)}`);
 
 // Prefill groupId
 document.getElementById('singleGroupId').value = groupId || '';
@@ -87,7 +87,7 @@ document.getElementById('singleForm').addEventListener('submit', async (evt) => 
   try {
     await postSchedule(scheduleISO, groupIdVal);
     // Success → go back to schedules for the same group/month
-    window.location.href = API.link(`feeminton/ui/schedules.html?groupId=${encodeURIComponent(groupId)}&groupName=${encodeURIComponent(groupName)}&year=${encodeURIComponent(yearQS)}&month=${encodeURIComponent(monthQS)}`);
+    window.location.href = API.link(`schedules.html?groupId=${encodeURIComponent(groupId)}&groupName=${encodeURIComponent(groupName)}&year=${encodeURIComponent(yearQS)}&month=${encodeURIComponent(monthQS)}`);
   } catch (err) {
     console.error(err);
     showAlert('danger', err.message || 'Error creating schedule.');
@@ -142,7 +142,7 @@ document.getElementById('recurringForm').addEventListener('submit', async (evt) 
       await postSchedule(iso, groupIdVal);
     }
     // Success → back to schedules page
-    window.location.href = API.link(`feeminton/ui/schedules.html?groupId=${encodeURIComponent(groupId)}&groupName=${encodeURIComponent(groupName)}&year=${encodeURIComponent(year)}&month=${encodeURIComponent(month)}`);
+    window.location.href = API.link(`schedules.html?groupId=${encodeURIComponent(groupId)}&groupName=${encodeURIComponent(groupName)}&year=${encodeURIComponent(year)}&month=${encodeURIComponent(month)}`);
   } catch (err) {
     console.error(err);
     showAlert('danger', err.message || 'Error creating one or more schedules.');

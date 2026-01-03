@@ -5,7 +5,10 @@
     "version" : "1.0"
   },
   "servers" : [ {
-    "url" : "https://nno3q5ecp6.execute-api.us-west-2.amazonaws.com/Stage/api"
+    "url" : "https://gvtvwamhvf.execute-api.us-west-2.amazonaws.com/Stage/api"
+    },
+    {
+    "url" : "https://gvtvwamhvf.execute-api.us-west-2.amazonaws.com/dev/api"
     },
     {
     "url" : "http://127.0.0.1:5000/api"

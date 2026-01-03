@@ -50,7 +50,7 @@ function setTitle() {
 function setBackLink() {
   const backLink = document.getElementById('backLink');
   if (!backLink) return;
-  const target = 'feeminton/ui/index.html'; // adjust path if needed
+  const target = 'index.html'; // adjust path if needed
   backLink.href = (window.API && typeof window.API.link === 'function')
     ? window.API.link(target)
     : target;

@@ -104,6 +104,7 @@ db_strategies = {
 
 
 def get_help():
+    logger.info("Getting help ...")
     return {
         "statusCode": 200,
         "body": json.dumps(
