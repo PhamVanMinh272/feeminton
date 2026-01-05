@@ -25,7 +25,11 @@ def lambda_handler(event, context):
     path = event.get("path", "")
     logger.info(f"Path: {path}")
     method = event.get("httpMethod", "GET")
-    body = json.loads(event.get("body", "{}") or "{}")
+    data = {}
+    data.update(event.get("pathParameters", {}) or {})
+    data.update(event.get("queryStringParameters", {}) or {})
+    data.update(json.loads(event.get("body", "{}") or "{}"))
+
     if method == "GET":
         paths = get_paths
     elif method == "POST":
@@ -38,7 +42,7 @@ def lambda_handler(event, context):
         raise Exception("Method Not Allowed")
     if path in paths:
         function_name = paths[path]
-        result = function_name(**body)
+        result = function_name(**data)
     else:
         raise Exception("Not found")
     return result
